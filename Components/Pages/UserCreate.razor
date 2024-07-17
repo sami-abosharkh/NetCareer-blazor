@@ -1,0 +1,138 @@
+﻿@page "/admin/User"
+@rendermode InteractiveServer
+
+@inject NavigationManager NavManager
+@inject UserManager<ApplicationUser> _userManager;
+
+@inject IServiceScopeFactory ServiceScopeFactory
+
+@attribute [Authorize(Roles = SD.Role_Admin)]
+
+<PageTitle>Create JobPost</PageTitle>
+
+<div class="container">
+    <br />
+    <div class="card p-4">
+        <h2 class="border-bottom">CREATE User</h2>
+
+        <EditForm Enhance Model="UserInput" OnValidSubmit="Submit" FormName="UserInputForm">
+            <DataAnnotationsValidator />
+
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="Email">Email</label>
+                        <InputText id="Email" @bind-Value="UserInput.Email" class="form-control" />
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="PhoneNumber">Phone Number</label>
+                        <InputText id="PhoneNumber" @bind-Value="UserInput.PhoneNumber" class="form-control" />
+                    </div>
+                </div>
+            </div>
+            <br />
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="Password">Password</label>
+                        <InputText type="password" id="Password" @bind-Value="UserInput.Password" class="form-control" />
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="ConfirmPassword">Confirm Password</label>
+                        <InputText type="password" id="ConfirmPassword" @bind-Value="UserInput.ConfirmPassword" class="form-control" />
+                    </div>
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label for="Role">Role</label>
+                <InputSelect id="Role" class="form-select" @bind-Value="UserInput.Role">
+                    @foreach (var item in Roles)
+                    {
+                        <option>@item</option>
+                    }
+                </InputSelect>
+            </div>
+            <br />
+            <ValidationSummary />
+            <div class="row">
+                <div class="col-6 text-start"><button type="submit" class="btn btn-primary">Create</button></div>
+                <div class="col-6 text-end"><a href="/admin/users" class="btn btn-outline-primary">cancel</a></div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private InputModel UserInput { get; set; } = new();
+
+    private List<string?> Roles = new();
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            using (var scope = ServiceScopeFactory.CreateScope())
+            {
+                var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+                Roles = await roleManager.Roles.Select(r => r.Name).ToListAsync();
+            }
+        }
+    }
+
+    private async Task Submit()
+    {
+        ApplicationUser User = new()
+            {
+                Email = UserInput.Email,
+                UserName = UserInput.Email,
+                PhoneNumber = UserInput.PhoneNumber,
+                CreatedAt = DateTime.Now
+            };
+        try
+        {
+            var result = await _userManager.CreateAsync(User, UserInput.Password);
+
+            if (result.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(User, UserInput.Role);
+            }
+            NavManager.NavigateTo("/admin/users");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred: {ex.Message}");
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+        
+        [Required]
+        public string Role { get; set; } = SD.Role_JobSeeker;
+
+        [Display(Name = "Phone Number")]
+        public string? PhoneNumber { get; set; }
+    }
+
+}

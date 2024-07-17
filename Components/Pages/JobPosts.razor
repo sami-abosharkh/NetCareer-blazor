@@ -1,0 +1,162 @@
+﻿@page "/JobPosts"
+
+@rendermode InteractiveServer
+@inject NavigationManager NavManager
+@inject IJobPostRepository JobPostRepo
+@inject IJobApplicationRepository JobApplicationRepo
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
+
+@attribute [Authorize(Roles = $"{SD.Role_Admin},{SD.Role_Recruiter}")]
+
+<PageTitle>Posts</PageTitle>
+
+<div class="container">
+    <br />
+    <div class="card p-4">
+        <h2 class="border-bottom">POSTS MANAGEMENT</h2>
+        <div class="row mb-2">
+            <div class="col-6 text-start">
+                <Button Type="ButtonType.Link" To="@($"/JobPost/{(selectedPost.FirstOrDefault()?.Id)}")" Color="ButtonColor.Warning" Disabled="@(!selectedPost.Any())">Edit</Button>
+                <ActionConfirmation Object="selectedPost.FirstOrDefault()" DeleteCallBack="DeletePost" Action="Delete"
+                                    DialogTitle="Are you sure you want to delete this Post?"
+                                    DialogMessage1="This will delete the Post. Once deleted can not be rolled back."
+                                    DialogMessage2="Do you want to proceed?"></ActionConfirmation>
+
+            </div>
+            <div class="col-6 text-end">
+                <Button Type="ButtonType.Link" To="@($"/JobPost")" Color="ButtonColor.Primary" Outline="true">New Post</Button>
+            </div>
+        </div>
+
+        <Grid TItem="JobPost"
+              Class="table table-hover table-bordered table-striped"
+              DataProvider="UsersDataProvider"
+              AllowSorting="true"
+              AllowPaging="true"
+              PageSize="10"
+              AllowSelection="true"
+              SelectionMode="GridSelectionMode.Single"
+              SelectedItemsChanged="OnSelectedItemsChanged"
+              Responsive="true" 
+              AllowRowClick="true"
+              OnRowClick="OnRowClick">
+
+            <GridColumns>
+                <GridColumn TItem="JobPost" HeaderText="Position" PropertyName="Position" SortKeySelector="item => item.Position">@context.Position</GridColumn>
+                <GridColumn TItem="JobPost" HeaderText="Company" PropertyName="Company" SortKeySelector="item => item.Company">@context.Company</GridColumn>
+                <GridColumn TItem="JobPost" HeaderText="Location" PropertyName="Location" SortKeySelector="item => item.Location">@context.Location</GridColumn>
+                <GridColumn TItem="JobPost" HeaderText="Posted At" PropertyName="PostedAt" SortKeySelector="item => item.PostedAt">@TimeSince(context.PostedAt)</GridColumn>
+                <GridColumn TItem="JobPost" HeaderText="Expires At" PropertyName="ExpiresAt" SortKeySelector="item => item.ExpiresAt">@TimeSince(context.ExpiresAt)</GridColumn>
+                <GridColumn TItem="JobPost" HeaderText="Applicants Total" PropertyName="ApplicantsTotal" SortKeySelector="item => item.ApplicantsTotal">@context.ApplicantsTotal</GridColumn>
+            </GridColumns>
+        </Grid>
+    </div>
+</div>
+
+<Preload LoadingText="Loading..." />
+
+<script>
+    function openInNewTab(url) {
+        window.open(url, '_blank');
+    }
+</script>
+
+@code {
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    private List<JobPost> JobPostsList { get; set; } = default!;
+    private HashSet<JobPost> selectedPost = new();
+
+    private ClaimsPrincipal user = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            AuthenticationState authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            user = authenticationState.User;
+        }
+    }
+
+    private async Task<GridDataProviderResult<JobPost>> UsersDataProvider(GridDataProviderRequest<JobPost> request)
+    {
+        PreloadService.Show(SpinnerColor.Light, "Loading data...");
+
+        List<string> userRoles = user.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+        string? userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (JobPostsList is null) // pull employees only one time for client-side filtering, sorting, and paging
+        {
+            if (userRoles.Contains(SD.Role_Admin))
+            {
+                JobPostsList = await JobPostRepo.GetAllAsync(); // call a service or an API to pull the employees
+            }
+            else if (userRoles.Contains(SD.Role_Recruiter))
+            {
+                JobPostsList = await JobPostRepo.GetAllAsync(
+                    filter: f => f.UserID == userId); // call a service or an API to pull the employees
+            }
+            else
+            {
+                JobPostsList = new();
+            }
+        }
+
+        foreach (JobPost item in JobPostsList)
+        {
+            item.ApplicantsTotal = await JobApplicationRepo.GetTotalCountAsync(filter: f => f.JobPostID == item.Id && f.ApplicationStatus == SD.ApplicationStatus_Applied);
+        }
+
+        PreloadService.Hide();
+        return await Task.FromResult(request.ApplyTo(JobPostsList));
+    }
+
+    private Task OnSelectedItemsChanged(HashSet<JobPost> aJobPost)
+    {
+        selectedPost = aJobPost is not null && aJobPost.Any() ? aJobPost : new();
+        return Task.CompletedTask;
+    }
+
+    private async Task OnRowClick(GridRowEventArgs<JobPost> args)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", $"/JobPost/{args.Item.Id}/Applicants/");
+    }
+
+    private async Task DeletePost()
+    {
+        JobPost? post = selectedPost.FirstOrDefault();
+
+        if (post is not null)
+        {
+            await JobPostRepo.RemoveAsync(post);
+            NavManager.Refresh(true);
+        }
+    }
+
+    private string TimeSince(DateTime aDate)
+    {
+        string text = "";
+        // Calculate the time difference from last updated
+        var timeSpan = DateTime.Now - aDate;
+
+        if (timeSpan.TotalMinutes < 1)
+        {
+            text = "just now";
+        }
+        else if (timeSpan.TotalMinutes < 60)
+        {
+            text = $"{(int)timeSpan.TotalMinutes} mins ago";
+        }
+        else if (timeSpan.TotalHours < 24)
+        {
+            text = $"{(int)timeSpan.TotalHours} hours ago";
+        }
+        else
+        {
+            text = $"{(int)timeSpan.TotalDays} days ago";
+        }
+        return text;
+    }
+}

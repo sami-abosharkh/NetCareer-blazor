@@ -1,0 +1,80 @@
+﻿@inject IJobApplicationRepository JobApplicationRepo
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<Card Class="shadow-sm">
+    <CardBody>
+        <div class="row">
+            <div class="col-10">
+                <CardTitle>@JobPost.Title</CardTitle>
+            </div>
+            <div class="col-2 text-end">
+                @if (!string.IsNullOrEmpty(JobApplication?.ApplicationStatus))
+                {
+                    <Badge Color="BadgeColor.Light"
+                           VisuallyHiddenText="Application Status">
+                        @JobApplication.ApplicationStatus</Badge>
+                }
+            </div>
+        </div>
+
+        <CardText Class="text-truncate">@JobPost.Description</CardText>
+        <div class="row">
+            <div class="col-8 d-flex align-items-end">
+                <Badge Color="BadgeColor.Secondary" VisuallyHiddenText="Location">@JobPost.Location</Badge>
+                &nbsp;
+                <Badge Color="BadgeColor.Success" VisuallyHiddenText="Job Type">Full-Time</Badge>
+            </div>
+            <div class="col-4 text-end">
+                <Button Color="ButtonColor.Primary" To="@($"/JobPost/Details/{JobPost.Id}")" Type="ButtonType.Link">Details</Button>
+            </div>
+        </div>
+    </CardBody>
+    <CardFooter>
+        <small class="text-muted bold">@($"{TimeSincePublished()} by ")<span class="fw-bold">@JobPost.ApplicationUser?.Email</span></small>
+    </CardFooter>
+</Card>
+
+@code {
+    [Parameter]
+    public required JobPost JobPost { get; set; }
+    
+    private JobApplication? JobApplication { get; set; } = default!;
+    private string? userId;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            AuthenticationState authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            userId = authenticationState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            JobApplication = await JobApplicationRepo.GetAsync(f => f.JobPostID == JobPost.Id && f.UserID == userId);
+            StateHasChanged();
+        }
+    }
+
+    private string TimeSincePublished()
+    {
+        string text = "";
+        // Calculate the time difference from last updated
+        var timeSpan = DateTime.Now - JobPost.PostedAt;
+
+        if (timeSpan.TotalMinutes < 1)
+        {
+            text = "just now";
+        }
+        else if (timeSpan.TotalMinutes < 60)
+        {
+            text = $"{(int)timeSpan.TotalMinutes} mins ago";
+        }
+        else if (timeSpan.TotalHours < 24)
+        {
+            text = $"{(int)timeSpan.TotalHours} hours ago";
+        }
+        else
+        {
+            text = $"{(int)timeSpan.TotalDays} days ago";
+        }
+        return text;
+    }
+}

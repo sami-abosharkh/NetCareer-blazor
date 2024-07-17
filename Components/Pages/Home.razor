@@ -1,0 +1,138 @@
+﻿@page "/"
+
+@rendermode InteractiveServer
+@inject NavigationManager NavManager
+@inject IJobPostRepository JobPostRepo
+
+<div class="container">
+    <TitleComponent Title="Header" Header="Header"></TitleComponent>
+    <div class="row">
+        <div class="col-6">
+            <MenuFilterComponent></MenuFilterComponent>
+        </div>
+        <div class="col-6">
+            <SearchFilterComponent SearchOnClick="HandleSearchFilter"></SearchFilterComponent>
+        </div>
+    </div>
+    @if (JobPostsList is not null)
+    {
+        @if (JobPostsList.Any())
+        {
+            <div class="row d-flex flex-wrap">
+                @foreach (JobPost item in JobPostsList)
+                {
+                    <div class="col-6 mb-4">
+                        <PostCardComponent JobPost="@item"></PostCardComponent>
+                    </div>
+                }
+            </div>
+            <div class="d-flex justify-content-center">
+                <Pagination ActivePageNumber="@PageNumber"
+                            TotalPages="@TotalPages"
+                            PageChanged="OnPageChangedAsync" />
+            </div>
+        }
+        else
+        {
+            <Alert Color="AlertColor.Light">
+                There are no posts published.
+            </Alert>
+        }
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(SearchFilter))
+        {
+            <Alert Color="AlertColor.Light">
+                Your search - @SearchFilter - did not match any documents.
+            </Alert>
+        }
+        else
+        {
+            <div class="text-center">
+                <Spinner Type="SpinnerType.Border" />
+            </div>
+        }
+    }
+</div>
+
+@code {
+    public List<JobPost>? JobPostsList { get; set; } = default!;
+
+    private string SearchFilter = "";
+    private int TotalPages;
+    private int PageNumber = 1;
+    private int PageSize = 10;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await GetJobPosts();
+            StateHasChanged();
+        }
+    }
+
+    private async Task GetJobPosts()
+    {
+        if (string.IsNullOrEmpty(SearchFilter))
+        {
+            int totalCount = await JobPostRepo.GetTotalCountAsync();
+
+            if (totalCount > 0)
+            {
+                JobPostsList = await JobPostRepo.GetAllAsync(
+                    orderBy: p => p.PostedAt,
+                    ascending: false,
+                    includeProperties: "ApplicationUser",
+                    pageSize: PageSize,
+                    pageNumber: PageNumber);
+
+                Pagination(totalCount);
+            }
+            else
+            {
+                JobPostsList = new();
+            }
+        }
+        else
+        {
+            int totalCount = await JobPostRepo.GetTotalCountAsync(f => f.Title.Contains(SearchFilter));
+
+            if (totalCount > 0)
+            {
+                JobPostsList = await JobPostRepo.GetAllAsync(
+                    orderBy: p => p.PostedAt,
+                    ascending: false,
+                    filter: f => f.Title.Contains(SearchFilter),
+                    includeProperties: "ApplicationUser",
+                    pageSize: PageSize,
+                    pageNumber: PageNumber);
+
+                Pagination(totalCount);
+            }
+            else
+            {
+                JobPostsList = new();
+            }
+        }
+    }
+
+    private async Task OnPageChangedAsync(int newPageNumber)
+    {
+        await Task.Run(() => { PageNumber = newPageNumber; });
+        await GetJobPosts();
+    }
+
+    private void Pagination(int totalCount)
+    {
+        TotalPages = (int)Math.Ceiling((double)totalCount / PageSize);
+    }
+
+    private async Task HandleSearchFilter(string searchFilter)
+    {
+        SearchFilter = searchFilter;
+        PageNumber = 1;
+        await GetJobPosts();
+    }
+}

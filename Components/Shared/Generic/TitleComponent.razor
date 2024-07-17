@@ -1,0 +1,16 @@
+﻿<PageTitle>@Title</PageTitle>
+
+@if(!string.IsNullOrEmpty(Header))
+{
+    <br />
+        <div class="d-flex justify-content-center"><h1 class="text-uppercase border-bottom">@Title</h1></div>
+    <br />
+}
+
+@code {
+    [Parameter]
+    public required string Title { get; set; }
+
+    [Parameter]
+    public string? Header { get; set; }
+}

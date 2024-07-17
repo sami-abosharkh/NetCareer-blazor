@@ -1,0 +1,90 @@
+﻿@implements IDisposable
+@inject NavigationManager NavigationManager
+
+<nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+    <div class="container">
+        <a class="navbar-brand" href="">
+            <img src="/Images/White-Logo.png" width="160" />
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01"
+                aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarColor01">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Home</NavLink>
+                </li>
+                <AuthorizeView Roles="@(SD.Role_Recruiter)">
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/JobPosts">Job Posts</NavLink>
+                    </li>
+                </AuthorizeView>
+                <AuthorizeView Roles="@(SD.Role_JobSeeker)">
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/Applications">Job Applications</NavLink>
+                    </li>
+                </AuthorizeView>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/About">About</NavLink>
+                </li>
+
+                <AuthorizeView Roles="@SD.Role_Admin">
+                    <Dropdown Color="DropdownColor.Primary">
+                        <DropdownToggleButton>Management</DropdownToggleButton>
+                        <DropdownMenu>
+                            <DropdownItem To="/admin/users" Type="DropdownItemType.Link">Users</DropdownItem>
+                            <DropdownItem To="/JobPosts" Type="DropdownItemType.Link">Job Posts</DropdownItem>
+                            <DropdownItem To="/Applications" Type="DropdownItemType.Link">Job Applications</DropdownItem>
+                        </DropdownMenu>
+                    </Dropdown>
+                </AuthorizeView>
+            </ul>
+            <ul class="navbar-nav ms-auto">
+                <AuthorizeView>
+                    <Authorized>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="/Account/Manage"><Icon Name="IconName.PersonCircle" /> Profile</NavLink>
+                        </li>
+                        <li>
+                            <form action="Account/Logout" method="post">
+                                <AntiforgeryToken />
+                                <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                                <button type="submit" class="nav-link">Logout</button>
+                            </form>
+                        </li>
+                    </Authorized>
+                    <NotAuthorized>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="/Account/Register">Register</NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="/Account/Login">Login</NavLink>
+                        </li>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+@code {
+    private string? currentUrl;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

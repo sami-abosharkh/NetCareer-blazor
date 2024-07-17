@@ -1,0 +1,121 @@
+﻿@inject NavigationManager NavManager
+@inject IJobApplicationRepository JobApplicationRepo
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
+
+<Grid TItem="JobApplication"
+      Class="table table-hover table-bordered table-striped"
+      DataProvider="JobApplicationsDataProvider"
+      AllowSorting="true"
+      AllowPaging="true"
+      PageSize="5"
+      Responsive="true"
+      AllowRowClick="true"
+      OnRowClick="OnRowClick">
+    
+    <GridColumns>
+        <GridColumn TItem="JobApplication" HeaderText="Recruiter Email" PropertyName="RecruiterEmail" SortKeySelector="item => item.JobPost.ApplicationUser.Email">@context.JobPost.ApplicationUser.Email</GridColumn>
+        <GridColumn TItem="JobApplication" HeaderText="JobSeeker Email" PropertyName="JobSeekerEmail" SortKeySelector="item => item.User.Email">@context.User.Email</GridColumn>
+        <GridColumn TItem="JobApplication" HeaderText="Company" PropertyName="Company" SortKeySelector="item => item.JobPost.Company">@context.JobPost.Company</GridColumn>
+        <GridColumn TItem="JobApplication" HeaderText="Position" PropertyName="Position" SortKeySelector="item => item.JobPost.Position">@context.JobPost.Position</GridColumn>
+        <GridColumn TItem="JobApplication" HeaderText="Location" PropertyName="Location" SortKeySelector="item => item.JobPost.Location">@context.JobPost.Location</GridColumn>
+        <GridColumn TItem="JobApplication" HeaderText="Posted At" PropertyName="PostedAt" SortKeySelector="item => item.JobPost.PostedAt">@TimeSince(context.JobPost.PostedAt)</GridColumn>
+        <GridColumn TItem="JobApplication" HeaderText="Applied At" PropertyName="AppliedAt" SortKeySelector="item => item.AppliedAt">@TimeSince(context.AppliedAt)</GridColumn>
+    </GridColumns>
+    <GridDetailView TItem="JobApplication">
+        <div class="row">
+            <div class="col-6">@context.JobPost.Title</div>
+            <div class="col-6 text-end"><Button Color="ButtonColor.Primary">Link</Button></div>
+        </div>
+    </GridDetailView>
+</Grid>
+
+<Preload LoadingText="Loading..." />
+
+<script>
+    function openInNewTab(url) {
+        window.open(url, '_blank');
+    }
+</script>
+
+@code {
+    [Parameter]
+    public required string ApplicationStatus { get; set; }
+
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    private List<JobApplication> JobApplicationList { get; set; } = default!;
+    private ClaimsPrincipal user = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            AuthenticationState authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            user = authenticationState.User;
+        }
+    }
+
+    private async Task<GridDataProviderResult<JobApplication>> JobApplicationsDataProvider(GridDataProviderRequest<JobApplication> request)
+    {
+        PreloadService.Show(SpinnerColor.Light, "Loading data...");
+
+        List<string> userRoles = user.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+        string? userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (JobApplicationList is null)
+        {
+            if (userRoles.Contains(SD.Role_Admin))
+            {
+                JobApplicationList = await JobApplicationRepo.GetAllAsync(
+                    filter: (f => f.ApplicationStatus == ApplicationStatus), 
+                    includeProperties: "JobPost.ApplicationUser,User");
+            }
+            else if (userRoles.Contains(SD.Role_JobSeeker))
+            {
+                JobApplicationList = await JobApplicationRepo.GetAllAsync(
+                    filter: (f => f.UserID == userId && f.ApplicationStatus == ApplicationStatus),
+                includeProperties: "JobPost.ApplicationUser,User");
+            }
+            else
+            {
+                JobApplicationList = new();
+            }
+        }
+
+        PreloadService.Hide();
+
+        return await Task.FromResult(request.ApplyTo(JobApplicationList));
+    }
+
+    private async Task OnRowClick(GridRowEventArgs<JobApplication> args)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", $"JobPost/Details/{args.Item.Id}");
+    }
+
+    private string TimeSince(DateTime aDate)
+    {
+        string text = "";
+        // Calculate the time difference from last updated
+        var timeSpan = DateTime.Now - aDate;
+
+        if (timeSpan.TotalMinutes < 1)
+        {
+            text = "just now";
+        }
+        else if (timeSpan.TotalMinutes < 60)
+        {
+            text = $"{(int)timeSpan.TotalMinutes} mins ago";
+        }
+        else if (timeSpan.TotalHours < 24)
+        {
+            text = $"{(int)timeSpan.TotalHours} hours ago";
+        }
+        else
+        {
+            text = $"{(int)timeSpan.TotalDays} days ago";
+        }
+        return text;
+    }
+
+}

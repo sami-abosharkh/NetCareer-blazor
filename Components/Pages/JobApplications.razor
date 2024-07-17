@@ -1,0 +1,29 @@
+﻿@page "/Applications"
+@rendermode InteractiveServer
+
+@attribute [Authorize(Roles = $"{SD.Role_Admin},{SD.Role_JobSeeker}")]
+
+<div class="container">
+    <TitleComponent Title="Job Applications" Header="Job Applications"></TitleComponent>
+    <Tabs>
+        <Tab Title="Applied" Active="true">
+            <Content>
+                <ApplicationsGrid ApplicationStatus="@SD.ApplicationStatus_Applied"></ApplicationsGrid>
+            </Content>
+        </Tab>
+        <Tab Title="Saved">
+            <Content>
+                <ApplicationsGrid ApplicationStatus="@SD.ApplicationStatus_Saved"></ApplicationsGrid>
+            </Content>
+        </Tab>
+        <Tab Title="Rejected">
+            <Content>
+                <ApplicationsGrid ApplicationStatus="@SD.ApplicationStatus_Rejected"></ApplicationsGrid>
+            </Content>
+        </Tab>
+    </Tabs>
+</div>
+
+@code {
+
+}

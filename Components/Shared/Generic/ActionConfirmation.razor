@@ -1,0 +1,57 @@
+﻿<ConfirmDialog @ref="dialog" />
+
+<Button Type="ButtonType.Button"
+        @onclick="ConfirmationAsync"
+        Color="ButtonColor"
+        Disabled="@(Object is null)">
+        @Action</Button>
+
+@code {
+    [Parameter]
+    public object? Object { get; set; }
+    [Parameter]
+    public EventCallback DeleteCallBack { get; set; }
+
+    [Parameter]
+    public ButtonColor ButtonColor { get; set; } = ButtonColor.Danger;
+    [Parameter]
+    public string Action { get; set; } = "Delete";
+
+    [Parameter]
+    public string DialogTitle { get; set; } = "";
+    [Parameter]
+    public string DialogMessage1 { get; set; } = "";
+    [Parameter]
+    public string DialogMessage2 { get; set; } = "";
+
+    private ConfirmDialog dialog = default!;
+
+    private async Task ConfirmationAsync()
+    {
+        var options = new ConfirmDialogOptions
+            {
+                IsVerticallyCentered = true,
+                YesButtonText = Action,
+                YesButtonColor = ButtonColor.Danger,
+                NoButtonText = "Cancel",
+                NoButtonColor = ButtonColor.Secondary,
+                DialogCssClass = "text-start",
+            };
+        var confirmation = await dialog.ShowAsync(
+            title: DialogTitle,
+            message1: DialogMessage1,
+            message2: DialogMessage2,
+            confirmDialogOptions: options);
+
+        if (confirmation)
+        {
+            OnConfirm();
+        }
+    }
+
+    private void OnConfirm()
+    {
+        if (Object is null) return;
+        DeleteCallBack.InvokeAsync();
+    }
+}
