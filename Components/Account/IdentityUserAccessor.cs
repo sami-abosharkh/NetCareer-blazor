@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using NetCareer.Components.Pages;
 using NetCareer.Models;
 
 namespace NetCareer.Components.Account
@@ -7,14 +8,14 @@ namespace NetCareer.Components.Account
     {
         public async Task<ApplicationUser> GetRequiredUserAsync(HttpContext context)
         {
-            var JobPost = await userManager.GetUserAsync(context.User);
+            var User = await userManager.GetUserAsync(context.User);
 
-            if (JobPost is null)
+            if (User is null)
             {
                 redirectManager.RedirectToWithStatus("Account/InvalidUser", $"Error: Unable to load JobPost with ID '{userManager.GetUserId(context.User)}'.", context);
             }
 
-            return JobPost;
+            return User;
         }
     }
 }

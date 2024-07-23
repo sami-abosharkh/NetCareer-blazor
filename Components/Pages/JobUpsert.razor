@@ -1,0 +1,189 @@
+﻿@page "/Job/{CurrentJobPostId:int?}"
+
+@rendermode InteractiveServer
+
+@inject NavigationManager NavManager
+@inject IJobPostRepository JobPostRepo
+
+@attribute [Authorize(Roles = $"{SD.Role_Admin},{SD.Role_Recruiter}")]
+
+<PageTitle>@(CurrentJobPostId.HasValue ? "Edit Post" : "Add Post")</PageTitle>
+<br />
+
+@if (JobPost is not null)
+{
+    <div class="container rounded bg-white pt-3 shadow-sm">
+        <h2 class="border-bottom">@(CurrentJobPostId.HasValue ? "EDIT POST" : "ADD POST")</h2>
+        <EditForm Enhance Model="JobPost" OnValidSubmit="Submit" FormName="JobPostForm">
+            <DataAnnotationsValidator />
+
+            @if (JobPost.Id > 0)
+            {
+                <InputNumber @bind-Value="JobPost.Id" hidden></InputNumber>
+            }
+            <div class="form-group">
+                <label for="Title">Title</label>
+                <InputText id="Title" @bind-Value="JobPost.Title" class="form-control" />
+            </div>
+            <br />
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="Company">Company</label>
+                        <InputText id="Company" @bind-Value="JobPost.Company" class="form-control" />
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="Location">Location</label>
+                        <InputText id="Location" @bind-Value="JobPost.Location" class="form-control" />
+                    </div>
+                </div>
+            </div>
+            <br />
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="Position">Position</label>
+                        <InputText id="Position" @bind-Value="JobPost.Position" class="form-control" />
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="jobType">Job Type</label>
+                        <select id="jobType" class="form-control" @bind="JobPost.JobType">
+                            @foreach (string item in JobTypeList)
+                            {
+                                <option value="@item">@item</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <br />
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="WorkArrangement">Work Arrangement</label>
+                        <select id="WorkArrangement" class="form-control" @bind="JobPost.WorkArrangement">
+                            @foreach (string item in WorkArrangementList)
+                            {
+                                <option value="@item">@item</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="SalaryRange">Salary Range</label>
+                        <CurrencyInput TValue="int?" id="SalaryRange" @bind-Value="JobPost.SalaryRange" Placeholder="Enter amount" />
+                    </div>
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label for="Description">Description</label>
+                <InputTextArea id="Description" @bind-Value="JobPost.Description" class="form-control" rows="10" />
+            </div>
+            <br />
+            <label for="ExpiresAt">ExpiresAt</label>
+            <InputDate id="ExpiresAt" @bind-Value="JobPost.ExpiresAt" class="form-control" />
+            <br />
+            <ValidationSummary />
+            <div class="row">
+                <div class="col-6"><button type="submit" class="btn btn-primary">@(CurrentJobPostId.HasValue ? "Save" : "Publish")</button></div>
+                <div class="col-6 text-end">
+                    <Button Type="ButtonType.Link"
+                            To="@(JobPost.Id > 0 ? $"/Job/Manage/{JobPost.Id}" : "/Jobs" )" Color="ButtonColor.Primary" Outline="true">
+                        Cancel
+                    </Button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    // Parameter to receive the current job post ID
+    [Parameter]
+    public int? CurrentJobPostId { get; set; }
+
+    // Parameter to receive the job post details from a form
+    [SupplyParameterFromForm]
+    public JobPost? JobPost { get; set; }
+
+    // Lists to hold job types and work arrangements
+    private List<string> JobTypeList = new List<string> { SD.JobType_FullTime, SD.JobType_PartTime, SD.JobType_Contract };
+    private List<string> WorkArrangementList = new List<string> { SD.WorkArrangement_OnSite, SD.WorkArrangement_Remote, SD.WorkArrangement_Hybrid };
+
+    // Identity and Authentication
+    // Cascading parameter to get the current authentication state
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+    private ClaimsPrincipal user = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (authenticationState is not null)
+        {
+            // Get the current user's authentication state
+            var authState = await authenticationState;
+            user = authState.User;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Get the current user's ID and roles
+        string? userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        List<string> userRoles = user.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+
+        // If CurrentJobPostId has a value, fetch the job post details
+        if (CurrentJobPostId.HasValue)
+        {
+            // If the user is an admin, fetch the job post by its ID
+            // Otherwise, fetch the job post by its ID and the user's ID
+            if (userRoles.Contains(SD.Role_Admin))
+            {
+                JobPost = await JobPostRepo.GetAsync(x => x.Id == CurrentJobPostId);
+            }
+            else
+            {
+                JobPost = await JobPostRepo.GetAsync(x => x.Id == CurrentJobPostId && x.UserID == userId);
+            }
+
+            // If the job post is not found, navigate to the NotFound page
+            if (JobPost is null) NavManager.NavigateTo("/NotFound");
+        }
+        else
+        {
+            // If CurrentJobPostId does not have a value, create a new job post with default values
+            JobPost = new()
+                {
+                    UserID = userId,
+                    ExpiresAt = DateTime.Now.AddMonths(1),
+                    JobType = SD.JobType_FullTime,
+                    WorkArrangement = SD.WorkArrangement_OnSite,
+                };
+        }
+    }
+
+    // Method to submit the job post form
+    private async Task Submit()
+    {
+        if (JobPost is null) return;
+        // If the job post already exists, update it
+        if (JobPost.Id > 0)
+        {
+            await JobPostRepo.UpdateAsync(JobPost);
+            NavManager.NavigateTo($"/Job/Manage/{JobPost.Id}");
+        }
+        else
+        {
+            // If the job post is new, set the posted date and create it
+            JobPost.PostedAt = DateTime.Now;
+            await JobPostRepo.CreateAsync(JobPost);
+            NavManager.NavigateTo("/Jobs");
+        }
+    }
+}

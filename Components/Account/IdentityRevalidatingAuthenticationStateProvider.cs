@@ -29,8 +29,8 @@ namespace NetCareer.Components.Account
 
         private async Task<bool> ValidateSecurityStampAsync(UserManager<ApplicationUser> userManager, ClaimsPrincipal principal)
         {
-            var JobPost = await userManager.GetUserAsync(principal);
-            if (JobPost is null)
+            var User = await userManager.GetUserAsync(principal);
+            if (User is null)
             {
                 return false;
             }
@@ -41,7 +41,7 @@ namespace NetCareer.Components.Account
             else
             {
                 var principalStamp = principal.FindFirstValue(options.Value.ClaimsIdentity.SecurityStampClaimType);
-                var userStamp = await userManager.GetSecurityStampAsync(JobPost);
+                var userStamp = await userManager.GetSecurityStampAsync(User);
                 return principalStamp == userStamp;
             }
         }

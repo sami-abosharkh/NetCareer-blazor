@@ -1,98 +1,116 @@
 ﻿@page "/Account/Manage"
 @inject IProfileRepository ProfileRepo
-@inject NavigationManager NavigationManager
+@inject NavigationManager NavManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
-
-@attribute [Authorize(Roles = SD.Role_JobSeeker)]
 
 <PageTitle>Manage Profile</PageTitle>
 
 <h3>Manage Profile</h3>
 
 <div class="row">
-    <div class="col-md-6">
-        <EditForm method="post" Model="Profile" OnValidSubmit="Submit" FormName="edit" Enhance>
-            <DataAnnotationsValidator />
-            @if (Profile.Id > 0)
-            {
-                <InputNumber @bind-Value="Profile.Id" hidden></InputNumber>
-            }
-            <InputText @bind-Value="Profile.UserID" hidden></InputText>
-            <div class="form-floating mb-3">
-                <InputText id="firstname" @bind-Value="Profile.FirstName" class="form-control" autocomplete="FirstName" aria-required="true" placeholder="Please enter First Name." />
-                <label for="firstname" class="form-label">First Name</label>
-                <ValidationMessage For="() => Profile.FirstName" class="text-danger" />
+    <EditForm method="post" Model="ModelInput" OnValidSubmit="OnValidSubmitAsync" FormName="edit" Enhance>
+        <DataAnnotationsValidator />
+        @if (ModelInput.Id > 0)
+        {
+            <InputNumber @bind-Value="ModelInput.Id" hidden></InputNumber>
+            <InputText @bind-Value="ModelInput.UserID" hidden></InputText>
+            <InputText @bind-Value="ModelInput.ProfilePicture" hidden></InputText>
+        }
+        <div class="row mb-3">
+            <div class="col-6">
+                <div class="form-floating">
+                    <InputText id="firstname" @bind-Value="ModelInput.FirstName" class="form-control" autocomplete="FirstName" aria-required="true" placeholder="Please enter First Name." />
+                    <label for="firstname" class="form-label">First Name</label>
+                    <ValidationMessage For="@(() => ModelInput.FirstName)" class="text-danger" />
+                </div>
             </div>
-            <div class="form-floating mb-3">
-                <InputText id="lastname" @bind-Value="Profile.LastName" class="form-control" autocomplete="LastName" aria-required="true" placeholder="Please enter Last Name." />
-                <label for="lastname" class="form-label">Last Name</label>
-                <ValidationMessage For="() => Profile.LastName" class="text-danger" />
+            <div class="col-6">
+                <div class="form-floating">
+                    <InputText id="lastname" @bind-Value="ModelInput.LastName" class="form-control" autocomplete="LastName" aria-required="true" placeholder="Please enter Last Name." />
+                    <label for="lastname" class="form-label">Last Name</label>
+                    <ValidationMessage For="@(() => ModelInput.LastName)" class="text-danger" />
+                </div>
             </div>
-            <div class="form-floating mb-3">
-                <InputText id="headline" @bind-Value="Profile.Headline" class="form-control" autocomplete="Headline" aria-required="true" placeholder="Please enter Headline." />
-                <label for="headline" class="form-label">Headline</label>
-                <ValidationMessage For="() => Profile.Headline" class="text-danger" />
+        </div>
+        <div class="form-floating mb-3">
+            <InputText id="headline" @bind-Value="ModelInput.Headline" class="form-control" autocomplete="Headline" aria-required="true" placeholder="Please enter Headline." />
+            <label for="headline" class="form-label">Headline</label>
+            <ValidationMessage For="@(() => ModelInput.Headline)" class="text-danger" />
+        </div>
+        <div class="form-floating mb-3">
+            <InputTextArea id="summary" @bind-Value="ModelInput.Summary" class="form-control" rows="10" autocomplete="Summary" aria-required="true" placeholder="Please enter Summary." />
+            <label for="summary" class="form-label">Summary</label>
+            <ValidationMessage For="@(() => ModelInput.Summary)" class="text-danger" />
+        </div>
+        <div class="row mb-3">
+            <div class="col-6">
+                <div class="form-floating">
+                    <InputText id="location" @bind-Value="ModelInput.Location" class="form-control" autocomplete="Location" aria-required="true" placeholder="Please enter Location." />
+                    <label for="location" class="form-label">Location</label>
+                    <ValidationMessage For="@(() => ModelInput.Location)" class="text-danger" />
+                </div>
             </div>
-            <div class="form-floating mb-3">
-                <InputText id="summary" @bind-Value="Profile.Summary" class="form-control" autocomplete="Summary" aria-required="true" placeholder="Please enter Summary." />
-                <label for="summary" class="form-label">Summary</label>
-                <ValidationMessage For="() => Profile.Summary" class="text-danger" />
+            <div class="col-6">
+                <div class="form-floating">
+                    <InputText id="industry" @bind-Value="ModelInput.Industry" class="form-control" autocomplete="Industry" aria-required="true" placeholder="Please enter Industry." />
+                    <label for="industry" class="form-label">Industry</label>
+                    <ValidationMessage For="@(() => ModelInput.Industry)" class="text-danger" />
+                </div>
             </div>
-            <div class="form-floating mb-3">
-                <InputText id="location" @bind-Value="Profile.Location" class="form-control" autocomplete="Location" aria-required="true" placeholder="Please enter Location." />
-                <label for="location" class="form-label">Location</label>
-                <ValidationMessage For="() => Profile.Location" class="text-danger" />
-            </div>
-            <div class="form-floating mb-3">
-                <InputText id="industry" @bind-Value="Profile.Industry" class="form-control" autocomplete="Industry" aria-required="true" placeholder="Please enter Industry." />
-                <label for="industry" class="form-label">Industry</label>
-                <ValidationMessage For="() => Profile.Industry" class="text-danger" />
-            </div>
-            <div class="form-floating mb-3">
-                <InputText id="experienceyears" @bind-Value="Profile.ExperienceYears" class="form-control" autocomplete="ExperienceYears" aria-required="true" placeholder="Please enter Experience Years." />
-                <label for="experienceyears" class="form-label">Experience Years</label>
-                <ValidationMessage For="() => Profile.ExperienceYears" class="text-danger" />
-            </div>
-            <div class="form-floating mb-3">
-                <InputText id="education" @bind-Value="Profile.Education" class="form-control" autocomplete="Education" aria-required="true" placeholder="Please enter Education." />
-                <label for="education" class="form-label">Education</label>
-                <ValidationMessage For="() => Profile.Education" class="text-danger" />
-            </div>
-            <button type="submit" class="btn btn-primary">Save</button>
-        </EditForm>
-    </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+    </EditForm>
 </div>
 
 @code {
     [SupplyParameterFromForm]
-    public Profile Profile { get; set; } = new ();
+    public Profile ModelInput { get; set; } = new();
 
-    private ClaimsPrincipal user = new();
-    string? userId;
+    //Identity
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+
+    public Profile? Profile { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
-        AuthenticationState authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        user = authenticationState.User;
-        userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        Profile? ExistingProfile = await ProfileRepo.GetAsync(filter: f => f.UserID == userId);
-        if(ExistingProfile is not null)
+        if (authenticationState is not null)
         {
-            Profile = ExistingProfile;
+            var authState = await authenticationState;
+            string? userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            List<string> userRoles = authState.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+
+            if (!userRoles.Contains(SD.Role_JobSeeker))
+            {
+                NavManager.NavigateTo("/Account/Manage/Phone");
+            }
+
+            Profile = await ProfileRepo.GetAsync(filter: f => f.UserID == userId);
+
+            if (Profile is not null)
+            {
+                if (ModelInput.UserID != userId)
+                {
+                    ModelInput = Profile;
+                }
+            }
+            else
+            {
+                ModelInput.UserID = userId;
+            }
         }
     }
 
-    public async Task Submit()
+    private async Task OnValidSubmitAsync()
     {
-        if (string.IsNullOrEmpty(Profile.UserID))
+        if (Profile is null)
         {
-            Profile.UserID = userId;
-            await ProfileRepo.CreateAsync(Profile);
+            await ProfileRepo.CreateAsync(ModelInput);
         }
         else
         {
-            await ProfileRepo.UpdateAsync(Profile);
+            await ProfileRepo.UpdateAsync(ModelInput);
         }
     }
 }

@@ -98,5 +98,14 @@ namespace NetCareer.Repository
                 await context.SaveChangesAsync();
             }
         }
+
+        public async Task RemoveRange(IEnumerable<T> entity)
+        {
+            using (var context = _contextFactory.CreateDbContext())
+            {
+                context.Set<T>().RemoveRange(entity);
+                await context.SaveChangesAsync();
+            }
+        }
     }
 }

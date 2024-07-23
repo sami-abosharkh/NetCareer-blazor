@@ -1,0 +1,58 @@
+﻿<Modal @ref="modal" title="Add Skill" UseStaticBackdrop="true" CloseOnEscape="false">
+    <BodyTemplate>
+        <p>
+            Increase your job prospects by listing both technical skills (e.g., coding) and soft skills (e.g., teamwork).
+        </p>
+        <br />
+        <EditForm Model="SkillInput" OnValidSubmit="Submit" FormName="SkillAddForm" method="post">
+            <DataAnnotationsValidator />
+
+            <div class="form-floating">
+                <InputText id="SkillName" @bind-Value="SkillInput.SkillName" class="form-control" />
+                <label for="SkillName" class="form-label">Skill</label>
+                <ValidationMessage For="@(() => SkillInput.SkillName)" class="text-danger" />
+            </div>
+            <div class="my-2"></div>
+            <div class="form-floating">
+                <InputSelect id="SkillLevel" class="form-select" @bind-Value="SkillInput.ProficiencyLevel">
+                    <option disabled selected>Select Level</option>
+                    @foreach (string item in SkillLevelList)
+                    {
+                        <option value="@item">@item</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="@(() => SkillInput.ProficiencyLevel)" class="text-danger" />
+                <label for="SkillLevel">Select Level</label>
+            </div>
+            <div class="my-3"></div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary w-50 shadow">Save</button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="OnHideModalClick">Cancel</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    private Modal modal = default!;
+
+    [Parameter]
+    public EventCallback<Skill> SkillModelCallback { get; set; }
+
+    [SupplyParameterFromForm]
+    private Skill SkillInput { get; set; } = new();
+
+    private static List<string> SkillLevelList = new List<string> { SD.SkillLevel_Beginner, SD.SkillLevel_Intermediate, SD.SkillLevel_Expert };
+
+    public async Task OnShowModalClick() => await modal.ShowAsync();
+    private async Task OnHideModalClick() => await modal.HideAsync();
+
+    private async Task Submit()
+    {
+        await OnHideModalClick();
+        await SkillModelCallback.InvokeAsync(SkillInput);
+        SkillInput = new();
+    }
+}

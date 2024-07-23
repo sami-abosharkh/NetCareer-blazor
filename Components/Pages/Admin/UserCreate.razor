@@ -68,25 +68,31 @@
 </div>
 
 @code {
+    // Model to bind the user input form
     [SupplyParameterFromForm]
     private InputModel UserInput { get; set; } = new();
 
+    // List to hold roles fetched from the RoleManager
     private List<string?> Roles = new();
 
+    // After the component has rendered, fetch the roles if it's the first render
     protected async override Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             using (var scope = ServiceScopeFactory.CreateScope())
             {
+                // Fetch roles using RoleManager and store them in Roles list
                 var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
                 Roles = await roleManager.Roles.Select(r => r.Name).ToListAsync();
             }
         }
     }
 
+    // Method to handle form submission
     private async Task Submit()
     {
+        // Create a new ApplicationUser object with the input data
         ApplicationUser User = new()
             {
                 Email = UserInput.Email,
@@ -94,22 +100,28 @@
                 PhoneNumber = UserInput.PhoneNumber,
                 CreatedAt = DateTime.Now
             };
+
         try
         {
+            // Create the user in the identity system
             var result = await _userManager.CreateAsync(User, UserInput.Password);
 
+            // If user creation is successful, add the user to the selected role
             if (result.Succeeded)
             {
                 await _userManager.AddToRoleAsync(User, UserInput.Role);
             }
+            // Navigate to the admin users page
             NavManager.NavigateTo("/admin/users");
         }
         catch (Exception ex)
         {
+            // Log any exception that occurs during user creation
             Console.WriteLine($"An error occurred: {ex.Message}");
         }
     }
 
+    // Input model to hold the form data
     private sealed class InputModel
     {
         [Required]
@@ -127,12 +139,11 @@
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = "";
-        
+
         [Required]
         public string Role { get; set; } = SD.Role_JobSeeker;
 
         [Display(Name = "Phone Number")]
         public string? PhoneNumber { get; set; }
     }
-
 }

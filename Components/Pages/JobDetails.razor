@@ -1,0 +1,244 @@
+﻿@page "/Job/Details/{CurrentJobPostId:int}"
+@rendermode InteractiveServer
+
+@inject NavigationManager NavManager
+@inject IJobPostRepository JobPostRepo
+@inject IJobApplicationRepository JobApplicationRepo
+@inject IProfileRepository ProfileRepo
+
+<br />
+@if (JobPost is not null)
+{
+    <div class="container rounded bg-white p-4 shadow-sm">
+        <TitleComponent Title="Post Details" Header="@JobPost.Title"></TitleComponent>
+        <br />
+        <p class="text-justify p-4 bg-light"><span class="fw-bold">About this job</span><hr />@RawDescription()</p>
+        <hr />
+        <div class="p-4 bg-light border mb-2">
+            <div class="d-flex flex-wrap justify-content-between">
+                <div></div>
+                <div class="text-center">
+                    <h4><span class="border-bottom">COMPANY</span> <Icon Name="IconName.BuildingFill" /></h4>
+                    <p class="text-decoration-underline">@JobPost.Company</p>
+                </div>
+                <div class="vr"></div>
+                <div class="text-center">
+                    <h4><span class="border-bottom">POSITION</span> <Icon Name="IconName.PersonStanding" /></h4>
+                    <p class="text-decoration-underline">@JobPost.Position</p>
+                </div>
+                <div class="vr"></div>
+                <div class="text-center">
+                    <h4><span class="border-bottom">LOCATION</span> <Icon Name="IconName.PinMapFill" /></h4>
+                    <p class="text-decoration-underline">
+                        @JobPost.Location
+                    </p>
+                </div>
+                <div class="vr"></div>
+                <div class="text-center">
+                    <h4><span class="border-bottom m-0">SALARY</span> <Icon Name="IconName.CashStack" /></h4>
+                    <p>@(JobPost.SalaryRange > 0 ? string.Format(CultureInfo.CurrentCulture, "{0:C}", JobPost.SalaryRange) : "Not specified")</p>
+                </div>
+                <div></div>
+            </div>
+        </div>
+        <div class=" p-4 bg-light border">
+            <div class="d-flex flex-wrap justify-content-between">
+                <div></div>
+                <div class="text-center">
+                    <h4><span class="border-bottom">JOB TYPE</span> <Icon Name="IconName.PersonWorkspace" /></h4>
+                    <p class="text-decoration-underline">@JobPost.JobType</p>
+                </div>
+                <div class="vr"></div>
+                <div class="text-center">
+                    <h4><span class="border-bottom">WORK ARRANGEMENT</span> <Icon Name="IconName.Calendar3" /></h4>
+                    <p class="text-decoration-underline">@JobPost.WorkArrangement</p>
+                </div>
+                <div></div>
+            </div>
+        </div>
+
+        <hr />
+        <AuthorizeView Roles="@SD.Role_JobSeeker">
+            @if (!hasProfile)
+            {
+                <Alert Color="AlertColor.Warning" Dismissable="false">
+                    <Icon Name="IconName.ExclamationTriangleFill" class="me-2"></Icon>
+                    Create a profile in order to apply for this job, click on <a href="/Account/Manage">Link</a>
+                </Alert>
+            }
+            <div class="row">
+                <div class="col-6">
+                    @if (JobApplication is not null)
+                    {
+                        @if (JobApplication.ApplicationStatus.Equals(SD.ApplicationStatus_Applied))
+                        {
+                            <Button Type="ButtonType.Button" Color="ButtonColor.Primary" Disabled>Applied</Button>
+                        }
+                        else if (JobApplication.ApplicationStatus.Equals(SD.ApplicationStatus_Saved))
+                        {
+                            if (!hasProfile)
+                            {
+                                <Button Disabled="true" Type="ButtonType.Button" Color="ButtonColor.Primary">Apply</Button>
+                            }
+                            else
+                            {
+                                <Button Type="ButtonType.Button" Color="ButtonColor.Primary"
+                                        @onclick="ApplyJobApplication">
+                                    Apply
+                                </Button>
+                            }
+                            <text>&nbsp;</text>
+                            <Button Type="ButtonType.Button" Color="ButtonColor.Danger" Outline="true"
+                                    @onclick="UnsavedJobApplication">
+                                Unsave
+                            </Button>
+                        }
+                    }
+                    else
+                    {
+                        if (!hasProfile)
+                        {
+                            <Button Disabled="true" Type="ButtonType.Button" Color="ButtonColor.Primary">Apply</Button>
+                        }
+                        else
+                        {
+                            <Button Type="ButtonType.Button" Color="ButtonColor.Primary" @onclick="ApplyJobApplication">
+                                Apply
+                            </Button>
+                        }
+                        <text>&nbsp;</text>
+                        <Button Type="ButtonType.Button" Color="ButtonColor.Secondary" Outline="true" @onclick="SaveJobApplication">
+                            Save
+                        </Button>
+                    }
+                </div>
+            </div>
+        </AuthorizeView>
+    </div>
+}
+
+@code {
+    // Injecting ModalService to use modals within the component
+    [Inject] ModalService ModalService { get; set; } = default!;
+
+    // Identity and Authentication
+    // Cascading parameter to get the current authentication state
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+    private ClaimsPrincipal user = new();
+    private string? userId;
+    private bool hasProfile;
+
+    // Parameter to receive the JobPost ID
+    [Parameter]
+    public int CurrentJobPostId { get; set; }
+
+    // JobPost object to hold the job post details
+    private JobPost? JobPost { get; set; }
+    // JobApplication object to hold the job application details
+    private JobApplication? JobApplication { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (authenticationState is not null)
+        {
+            // Get the current user's authentication state
+            var authState = await authenticationState;
+            user = authState.User;
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            // Check if the user has a profile
+            Profile? HasProfile = await ProfileRepo.GetAsync(filter: f => f.UserID == userId);
+            hasProfile = HasProfile is not null ? true : false;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Get the job post by its ID
+        JobPost = await JobPostRepo.GetAsync(x => x.Id == CurrentJobPostId);
+
+        if (JobPost is not null)
+        {
+            // Get the job application for the current job post
+            await GetJobApplication();
+        }
+        else
+        {
+            // Navigate to the NotFound page if the job post is not found
+            NavManager.NavigateTo("/NotFound");
+        }
+    }
+
+    // Method to fetch the job application for the current job post and user
+    private async Task GetJobApplication() => JobApplication = await JobApplicationRepo.GetAsync(f => f.JobPostID == JobPost.Id && f.UserID == userId);
+
+    // Method to return the job post description as a MarkupString with <br> tags for new lines
+    private MarkupString RawDescription()
+    {
+        if (string.IsNullOrEmpty(JobPost?.Description))
+        {
+            return new MarkupString(string.Empty);
+        }
+
+        var formattedText = JobPost.Description.Replace("\n", "<br>").Replace("\r", "");
+        return new MarkupString(formattedText);
+    }
+
+    // Method to save the job application with the status 'Saved'
+    private async Task SaveJobApplication()
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+
+        if (JobApplication is null)
+        {
+            // Create a new job application if none exists
+            JobApplication = new()
+                {
+                    JobPostID = JobPost.Id,
+                    UserID = userId,
+                    AppliedAt = DateTime.Now,
+                    ApplicationStatus = SD.ApplicationStatus_Saved
+                };
+
+            await JobApplicationRepo.CreateAsync(JobApplication);
+        }
+    }
+
+    // Method to remove the saved job application
+    private async Task UnsavedJobApplication()
+    {
+        if (JobApplication is not null)
+        {
+            await JobApplicationRepo.RemoveAsync(JobApplication);
+            // Refresh the job application after removal
+            await GetJobApplication();
+        }
+    }
+
+    // Method to apply for the job, setting the status to 'Applied'
+    private async Task ApplyJobApplication()
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+
+        if (JobApplication is null)
+        {
+            // Create a new job application if none exists
+            JobApplication = new()
+                {
+                    JobPostID = JobPost.Id,
+                    UserID = userId,
+                    AppliedAt = DateTime.Now,
+                    ApplicationStatus = SD.ApplicationStatus_Applied
+                };
+
+            await JobApplicationRepo.CreateAsync(JobApplication);
+        }
+        else
+        {
+            // Update the existing job application's status to 'Applied'
+            JobApplication.ApplicationStatus = SD.ApplicationStatus_Applied;
+            await JobApplicationRepo.UpdateAsync(JobApplication);
+        }
+    }
+}

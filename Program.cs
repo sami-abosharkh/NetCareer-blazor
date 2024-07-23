@@ -30,6 +30,9 @@ builder.Services.AddScoped<IDbInitializer, DbInitializer>();
 builder.Services.AddScoped<IJobPostRepository, JobPostRepository>();
 builder.Services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
 builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
+builder.Services.AddScoped<ISkillRepository, SkillRepository>();
+builder.Services.AddScoped<IEducationRepository, EducationRepository>();
+builder.Services.AddScoped<IExperienceRepository, ExperienceRepository>();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -86,10 +89,10 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.MapFallback(context => {
-    context.Response.Redirect("/NotFound");
-    return Task.CompletedTask;
-});
+//app.MapFallback(context => {
+//    context.Response.Redirect("/NotFound");
+//    return Task.CompletedTask;
+//});
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();

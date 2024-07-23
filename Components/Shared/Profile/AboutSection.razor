@@ -1,0 +1,92 @@
+﻿@inject IJSRuntime JS
+
+<div class="d-flex justify-content-between align-items-center">
+    <h4 class="display-5">@FullName</h4>
+    <AuthorizeView>
+        @if (IsCurrentUser)
+        {
+            <Button Class="align-self-start" Type="ButtonType.Link" Color="ButtonColor.Light" To="/account/Manage"><Icon Name="IconName.Gear" Size="IconSize.x2" /></Button>
+        }
+        else
+        {
+            <Button Class="align-self-start" Type="ButtonType.Button" Color="ButtonColor.Primary">Message</Button>
+        }
+    </AuthorizeView>
+</div>
+@if (!string.IsNullOrEmpty(Headline))
+{
+    <p class="lead">
+        @Headline
+    </p>
+}
+@if (!string.IsNullOrEmpty(Summary))
+{
+    <br />
+    <div>
+        <h6>About</h6>
+        <p @ref="summaryTextElement" class="text-justify @(isCollapsed ? "text-truncate-two" : "")">
+            @RawDescription(Summary)
+        </p>
+        @if (showButton)
+        {
+            <Button Type="ButtonType.Button" Color="ButtonColor.Link" Class="p-0" @onclick="() => isCollapsed = !isCollapsed" aria-expanded="false">@(isCollapsed ? "Read more" : "Hide")</Button>
+        }
+    </div>
+}
+
+<script>
+    window.CheckOverflow = (element) => {
+        if ((element.offsetHeight < element.scrollHeight) || (element.offsetWidth < element.scrollWidth)) {
+            // your element have overflow
+            return true;
+        }
+        else {
+            //your element don't have overflow
+            return false;
+        }
+    }
+</script>
+
+@code {
+    [Parameter]
+    public string FullName { get; set; } = "";
+    [Parameter]
+    public string? Headline { get; set; }
+    [Parameter]
+    public string? Summary { get; set; }
+    [Parameter]
+    public bool IsCurrentUser { get; set; }
+
+    private ElementReference summaryTextElement;
+    private bool isCollapsed = true;
+    private bool showButton = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                showButton = await JS.InvokeAsync<bool>("CheckOverflow", summaryTextElement);
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error checking overflow: {ex.Message}");
+            }
+        }
+    }
+
+    private MarkupString RawDescription(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return new MarkupString(string.Empty);
+        }
+
+        // Replace new line characters with <br> HTML tags
+        var formattedText = text.Replace("\n", "<br>").Replace("\r", "");
+        return new MarkupString(formattedText);
+    }
+
+}

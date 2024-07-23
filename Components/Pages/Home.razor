@@ -4,32 +4,51 @@
 @inject NavigationManager NavManager
 @inject IJobPostRepository JobPostRepo
 
-<div class="container">
-    <TitleComponent Title="Header" Header="Header"></TitleComponent>
+<TitleComponent Title="Home"></TitleComponent>
+<br />
+<div class="container rounded bg-white pt-3 shadow-sm">
     <div class="row">
         <div class="col-6">
-            <MenuFilterComponent></MenuFilterComponent>
+            <JobsMenuFilter SearchOnClick="HandleLocationFilter"></JobsMenuFilter>
         </div>
         <div class="col-6">
-            <SearchFilterComponent SearchOnClick="HandleSearchFilter"></SearchFilterComponent>
+            <JobsSearchFilter SearchOnClick="HandleSearchFilter"></JobsSearchFilter>
         </div>
     </div>
+</div>
+<br />
+<div class="container rounded bg-white pt-3 shadow-sm">
     @if (JobPostsList is not null)
     {
         @if (JobPostsList.Any())
         {
-            <div class="row d-flex flex-wrap">
+            bool isEven = JobPostsList.Count % 2 == 0;
+
+            <div class="row">
                 @foreach (JobPost item in JobPostsList)
                 {
-                    <div class="col-6 mb-4">
-                        <PostCardComponent JobPost="@item"></PostCardComponent>
+                    <div class="col-6">
+                        <JobCard JobPost="@item"></JobCard>
+                        @if (item != JobPostsList.Last())
+                        {
+                            if (isEven && item == JobPostsList[JobPostsList.Count - 2])
+                            {
+                                <br />
+                            }
+                            else
+                            {
+                                <hr />
+                            }
+                        }
+                        else
+                        {
+                            <br />
+                        }
                     </div>
                 }
             </div>
             <div class="d-flex justify-content-center">
-                <Pagination ActivePageNumber="@PageNumber"
-                            TotalPages="@TotalPages"
-                            PageChanged="OnPageChangedAsync" />
+                <Pagination ActivePageNumber="@PageNumber" TotalPages="@TotalPages" PageChanged="OnPageChangedAsync" />
             </div>
         }
         else
@@ -57,45 +76,130 @@
 </div>
 
 @code {
-    public List<JobPost>? JobPostsList { get; set; } = default!;
+    [SupplyParameterFromQuery(Name = "Date")]
+    public string? PostDateFilter { get; set; } = "";
+
+    [SupplyParameterFromQuery(Name = "JobType")]
+    public string? JobTypeFilter { get; set; } = "";
+
+    [SupplyParameterFromQuery(Name = "WorkArrangement")]
+    public string? WorkArrangementFilter { get; set; } = "";
 
     private string SearchFilter = "";
+    private string LocationFilter = "";
     private int TotalPages;
     private int PageNumber = 1;
     private int PageSize = 10;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    public List<JobPost>? JobPostsList { get; set; } = default!;
+
+    protected override async Task OnParametersSetAsync()
     {
-        if (firstRender)
+        if (!string.IsNullOrEmpty(JobTypeFilter))
+        {
+            await GetJobPostsByJobType(JobTypeFilter);
+        }
+        else if (!string.IsNullOrEmpty(WorkArrangementFilter))
+        {
+            await GetJobPostsByWorkArrangement(WorkArrangementFilter);
+        }
+        else if (!string.IsNullOrEmpty(PostDateFilter))
+        {
+            await GetJobPostsByDateFilter(PostDateFilter);
+        }
+        else
         {
             await GetJobPosts();
-            StateHasChanged();
+        }
+    }
+
+    private async Task GetJobPostsByDateFilter(string value)
+    {
+        int duration = 0;
+
+        switch (value)
+        {
+            case "Today":
+                duration = -24;
+                break;
+            case "Week":
+                duration = -7 * 24;
+                break;
+            case "Month":
+                duration = -30 * 24;
+                break;
+            default:
+                throw new ArgumentException("Invalid duration value");
+        }
+
+        int totalCount = await JobPostRepo.GetTotalCountAsync(filter: f => f.PostedAt >= DateTime.Now.AddHours(duration));
+
+        if (totalCount > 0)
+        {
+            JobPostsList = await JobPostRepo.GetAllAsync(
+                orderBy: p => p.PostedAt,
+                ascending: false,
+                filter: f => f.PostedAt >= DateTime.Now.AddHours(duration),
+                includeProperties: "ApplicationUser",
+                pageSize: PageSize,
+                pageNumber: PageNumber);
+
+            Pagination(totalCount);
+        }
+        else
+        {
+            JobPostsList = default!;
+        }
+    }
+
+    private async Task GetJobPostsByJobType(string value)
+    {
+        int totalCount = await JobPostRepo.GetTotalCountAsync(
+            filter: f => f.JobType.Equals(value));
+
+        if (totalCount > 0)
+        {
+            JobPostsList = await JobPostRepo.GetAllAsync(
+                orderBy: p => p.PostedAt,
+                ascending: false,
+                filter: f => f.JobType.Equals(value),
+                includeProperties: "ApplicationUser",
+                pageSize: PageSize,
+                pageNumber: PageNumber);
+
+            Pagination(totalCount);
+        }
+        else
+        {
+            JobPostsList = default!;
+        }
+    }
+
+    private async Task GetJobPostsByWorkArrangement(string value)
+    {
+        int totalCount = await JobPostRepo.GetTotalCountAsync(filter: f => f.WorkArrangement.Equals(value));
+
+        if (totalCount > 0)
+        {
+            JobPostsList = await JobPostRepo.GetAllAsync(
+                orderBy: p => p.PostedAt,
+                ascending: false,
+                filter: f => f.WorkArrangement.Equals(value),
+                includeProperties: "ApplicationUser",
+                pageSize: PageSize,
+                pageNumber: PageNumber);
+
+            Pagination(totalCount);
+        }
+        else
+        {
+            JobPostsList = default!;
         }
     }
 
     private async Task GetJobPosts()
     {
-        if (string.IsNullOrEmpty(SearchFilter))
-        {
-            int totalCount = await JobPostRepo.GetTotalCountAsync();
-
-            if (totalCount > 0)
-            {
-                JobPostsList = await JobPostRepo.GetAllAsync(
-                    orderBy: p => p.PostedAt,
-                    ascending: false,
-                    includeProperties: "ApplicationUser",
-                    pageSize: PageSize,
-                    pageNumber: PageNumber);
-
-                Pagination(totalCount);
-            }
-            else
-            {
-                JobPostsList = new();
-            }
-        }
-        else
+        if (!string.IsNullOrEmpty(SearchFilter))
         {
             int totalCount = await JobPostRepo.GetTotalCountAsync(f => f.Title.Contains(SearchFilter));
 
@@ -105,6 +209,47 @@
                     orderBy: p => p.PostedAt,
                     ascending: false,
                     filter: f => f.Title.Contains(SearchFilter),
+                    includeProperties: "ApplicationUser",
+                    pageSize: PageSize,
+                    pageNumber: PageNumber);
+
+                Pagination(totalCount);
+            }
+            else
+            {
+                JobPostsList = default!;
+            }
+        }
+        else if (!string.IsNullOrEmpty(LocationFilter))
+        {
+            int totalCount = await JobPostRepo.GetTotalCountAsync(f => f.Location.Contains(LocationFilter));
+
+            if (totalCount > 0)
+            {
+                JobPostsList = await JobPostRepo.GetAllAsync(
+                    orderBy: p => p.PostedAt,
+                    ascending: false,
+                    filter: f => f.Location.Contains(LocationFilter),
+                    includeProperties: "ApplicationUser",
+                    pageSize: PageSize,
+                    pageNumber: PageNumber);
+
+                Pagination(totalCount);
+            }
+            else
+            {
+                JobPostsList = default!;
+            }
+        }
+        else
+        {
+            int totalCount = await JobPostRepo.GetTotalCountAsync();
+
+            if (totalCount > 0)
+            {
+                JobPostsList = await JobPostRepo.GetAllAsync(
+                    orderBy: p => p.PostedAt,
+                    ascending: false,
                     includeProperties: "ApplicationUser",
                     pageSize: PageSize,
                     pageNumber: PageNumber);
@@ -131,7 +276,16 @@
 
     private async Task HandleSearchFilter(string searchFilter)
     {
+        LocationFilter = string.Empty;
         SearchFilter = searchFilter;
+        PageNumber = 1;
+        await GetJobPosts();
+    }
+
+    private async Task HandleLocationFilter(string locationFilter)
+    {
+        SearchFilter = string.Empty;
+        LocationFilter = locationFilter;
         PageNumber = 1;
         await GetJobPosts();
     }

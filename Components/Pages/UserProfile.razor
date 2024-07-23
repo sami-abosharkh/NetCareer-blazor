@@ -1,0 +1,362 @@
+﻿@page "/Profile"
+
+@rendermode InteractiveServer
+
+@inject NavigationManager NavManager
+@inject IProfileRepository ProfileRepo;
+@inject ISkillRepository SkillRepo
+@inject IEducationRepository EducationRepo
+@inject IExperienceRepository ExperienceRepo
+
+<PageTitle>Profile</PageTitle>
+<br />
+
+@if (Profile is not null)
+{
+    <PageTitle>@($"{Profile.FirstName} {Profile.LastName} - Profile")</PageTitle>
+    <div class="container rounded bg-white pt-3 shadow-sm">
+        <div class="row mb-3">
+            <div class="col-3">
+                <img class="border-4 img-thumbnail rounded mx-auto d-block" src="/Images/Profile/avatar.png" width="250" />
+            </div>
+            <div class="col-9">
+                <AboutSection FullName="@($"{Profile.FirstName} {Profile.LastName}")"
+                              Headline="@Profile.Headline"
+                              Summary="@Profile.Summary"
+                              IsCurrentUser="IsCurrentUser">
+                </AboutSection>
+            </div>
+        </div>
+    </div>
+    <br />
+    <div class="container">
+        <div class="row">
+            <div class="col-6 ps-0">
+                <Card Class="shadow-sm p-3 h-100">
+                    <CardTitle><span class="border-bottom">Contact Information</span> <Icon Name="IconName.PersonVCard" /></CardTitle>
+                    <CardText>
+                        @if (Profile.User is not null)
+                        {
+                            <dt class="col-sm-auto">Email</dt>
+                            <dd class="col-sm-auto">@Profile.User.Email</dd>
+                            <dt class="col-sm-auto">Phone Number</dt>
+                            <dd class="col-sm-auto">@Profile.User.PhoneNumber</dd>
+                        }
+                        else
+                        {
+                            <dt class="col-sm-auto">Email</dt>
+                            <dt class="col-sm-auto">Phone Number</dt>
+                        }
+                        <dt class="col-sm-auto">Location</dt>
+                        <dd class="col-sm-auto">@Profile.Location</dd>
+                    </CardText>
+                </Card>
+            </div>
+            @if (Education is not null || IsCurrentUser == true)
+            {
+                <div class="col-6 pe-0">
+                    <Card Class="shadow-sm p-3 h-100">
+                        <CardTitle Class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="border-bottom">Education</span> <Icon Name="IconName.Mortarboard" />
+                            </div>
+                            @if (IsCurrentUser)
+                            {
+                                @if (Education is not null)
+                                {
+                                    <Button Class="py-0" Type="ButtonType.Button" @onclick="() => EducationModelRef.OnShowModalClick()">Edit <Icon Name="IconName.Pencil" /></Button>
+                                }
+                                else
+                                {
+                                    <Button Class="py-0" Type="ButtonType.Button" @onclick="() => EducationModelRef.OnShowModalClick()">Add <Icon Name="IconName.PlusCircle" /></Button>
+                                }
+                            }
+                        </CardTitle>
+                        <CardText>
+                            @if (Education is not null)
+                            {
+                                <dt class="col-sm-auto">Degree </dt>
+                                <dd class="col-sm-auto">@Education.Degree</dd>
+                                <dt class="col-sm-auto">University </dt>
+                                <dd class="col-sm-auto">@Education.University</dd>
+                                <dt class="col-sm-auto">Start Year - End Year </dt>
+                                <dd class="col-sm-auto">@Education.StartYear.ToString("yyyy-MM") - @Education.EndYear.ToString("yyyy-MM")</dd>
+                            }
+                        </CardText>
+                    </Card>
+                    @if (IsCurrentUser)
+                    {
+                        <EducationModel @ref="EducationModelRef" Education="Education" EducationModelCallback="UpsertEducation"></EducationModel>
+                    }
+                </div>
+            }
+        </div>
+        <br />
+        @if (ExperiencesList.Any() || IsCurrentUser == true)
+        {
+            <div class="row">
+                <Card Class="shadow-sm p-3">
+                    <CardTitle Class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="border-bottom">Work Experience</span> <Icon Name="IconName.Briefcase" />
+                        </div>
+                        @if (IsCurrentUser)
+                        {
+                            <Button Class="py-0" Type="ButtonType.Button" @onclick="() => ExperienceModelRef.OnShowModalClick()">Add <Icon Name="IconName.PlusCircle" /></Button>
+                        }
+                    </CardTitle>
+                    <CardText>
+                        @if (ExperiencesList.Any())
+                        {
+                            @foreach (var item in ExperiencesList)
+                            {
+                                <ExperienceItem Experience="item"
+                                                ExperienceDeleteCallback="() => DeleteExperience(item.Id)"
+                                                ExperienceEditCallback="() => ExperienceModelRef.OnShowModalClick(item)"
+                                                IsCurrentUser="IsCurrentUser">
+                                </ExperienceItem>
+                                @if (item != ExperiencesList.Last())
+                                {
+                                    <hr />
+                                }
+                            }
+                        }
+                    </CardText>
+                </Card>
+                @if (IsCurrentUser)
+                {
+                    <ExperienceModel @ref="ExperienceModelRef" ExperienceModelCallback="UpsertExperience"></ExperienceModel>
+                }
+            </div>
+            <br />
+        }
+
+        @if (SkillsList.Any() || IsCurrentUser == true)
+        {
+            <div class="row">
+                <Card Class="shadow-sm p-3">
+                    <CardTitle Class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="border-bottom">Skills</span> <Icon Name="IconName.Wrench" />
+                        </div>
+
+                        @if (IsCurrentUser)
+                        {
+                            <Button Class="py-0" Type="ButtonType.Button" @onclick="() => SkillModelRef.OnShowModalClick()">Add <Icon Name="IconName.PlusCircle" /></Button>
+                        }
+                    </CardTitle>
+                    @if (SkillsList.Any())
+                    {
+                        <ul class="list-group">
+                            @foreach (var item in SkillsList)
+                            {
+                                <li class="list-group-item">
+                                    <div class="d-flex justify-content-start align-items-center">
+                                        <div class="flex-grow-1">
+                                            <dt class="col-sm-2">@item.SkillName</dt>
+                                            <dd class="col-sm-6 m-0">@item.ProficiencyLevel</dd>
+                                        </div>
+                                        @if (IsCurrentUser)
+                                        {
+                                            <ActionConfirmation Action="Close" DeleteCallBack="() => DeleteSkill(item.Id)"
+                                                                DialogTitle="Are you sure you want to delete this Skill?"
+                                                                DialogMessage1="This will delete the Skill. Once deleted can not be rolled back."
+                                                                DialogMessage2="Do you want to proceed?">
+                                            </ActionConfirmation>
+                                        }
+                                    </div>
+                                </li>
+                            }
+
+                        </ul>
+                    }
+
+                </Card>
+                @if (IsCurrentUser)
+                {
+                    <SkillModel @ref="SkillModelRef" SkillModelCallback="AddSkill"></SkillModel>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    // References to child components for Skills, Education, and Experience
+    private SkillModel? SkillModelRef;
+    private EducationModel? EducationModelRef;
+    private ExperienceModel? ExperienceModelRef;
+
+    // Parameter to get the user ID from the query string
+    [SupplyParameterFromQuery(Name = "id")]
+    public string? UserId { get; set; }
+
+    // Cascading parameter to get the current authentication state
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+    private string? CurrentUserId;
+
+    // Variables to store the current user ID and profile information
+    private Profile? Profile = default!;
+    private Education? Education = default!;
+    private List<Experience> ExperiencesList = new();
+    private List<Skill> SkillsList = new();
+
+    // Flag to check if the current user is viewing their own profile
+    private bool IsCurrentUser = false;
+
+    // Method called when the component is initialized
+    protected override async Task OnInitializedAsync()
+    {
+        if (authenticationState is not null)
+        {
+            var authState = await authenticationState;
+            CurrentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        }
+    }
+
+    // Method called when the component parameters are set or changed
+    protected override async Task OnParametersSetAsync()
+    {
+        await GetProfile();
+        await GetSkills();
+        await GetEducation();
+        await GetExperience();
+    }
+
+    // Method to get the profile information
+    private async Task GetProfile()
+    {
+        if (!string.IsNullOrEmpty(UserId))
+        {
+            Profile = await ProfileRepo.GetAsync(filter: g => g.UserID == UserId, includeProperties: "User");
+
+            if (!string.IsNullOrEmpty(CurrentUserId))
+            {
+                if (CurrentUserId.Equals(UserId))
+                {
+                    NavManager.NavigateTo("/Profile");
+                }
+            }
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(CurrentUserId))
+            {
+                Profile = await ProfileRepo.GetAsync(filter: g => g.UserID == CurrentUserId, includeProperties: "User");
+                IsCurrentUser = true;
+
+                if (Profile is null)
+                {
+                    NavManager.NavigateTo("/Account/Manage");
+                }
+            }
+        }
+
+        if (Profile is null)
+        {
+            NavManager.NavigateTo("/NotFound");
+        }
+    }
+
+    // Method to get the experience information
+    private async Task GetExperience()
+    {
+        if (Profile is not null)
+        {
+            ExperiencesList = await ExperienceRepo.GetAllAsync(filter: f => f.ProfileID == Profile.Id);
+        }
+    }
+
+    // Method to add or update experience information
+    private async Task UpsertExperience(Experience model)
+    {
+        if (Profile is null) return;
+        if (!IsCurrentUser) return;
+
+        if (model.ProfileID > 0)
+        {
+            await ExperienceRepo.UpdateAsync(model);
+        }
+        else
+        {
+            model.ProfileID = Profile.Id;
+            await ExperienceRepo.CreateAsync(model);
+        }
+        await GetExperience();
+    }
+
+    // Method to delete experience information
+    private async Task DeleteExperience(int Id)
+    {
+        if (!IsCurrentUser) return;
+
+        if (Id > 0)
+        {
+            Experience? Experience = await ExperienceRepo.GetAsync(f => f.Id == Id);
+            if (Experience is not null)
+            {
+                await ExperienceRepo.RemoveAsync(Experience);
+                await GetExperience();
+            }
+        }
+    }
+
+    // Method to add or update education information
+    private async Task UpsertEducation(Education model)
+    {
+        if (!IsCurrentUser) return;
+
+        if (model.ProfileID > 0)
+        {
+            await EducationRepo.UpdateAsync(model);
+        }
+        else
+        {
+            model.ProfileID = Profile.Id;
+            await EducationRepo.CreateAsync(model);
+        }
+        await GetEducation();
+    }
+
+    // Method to get the education information
+    private async Task GetEducation()
+    {
+        if (Profile is not null)
+        {
+            Education = await EducationRepo.GetAsync(filter: f => f.ProfileID == Profile.Id);
+        }
+    }
+
+    // Method to get the skills information
+    private async Task GetSkills()
+    {
+        if (Profile is not null && Profile.User is not null)
+        {
+            SkillsList = await SkillRepo.GetAllAsync(filter: f => f.UserID == Profile.User.Id);
+        }
+    }
+
+    // Method to add a new skill
+    private async Task AddSkill(Skill model)
+    {
+        if (!IsCurrentUser) return;
+
+        model.UserID = Profile.User?.Id;
+        await SkillRepo.CreateAsync(model);
+        await GetSkills();
+    }
+
+    // Method to delete a skill
+    private async Task DeleteSkill(int Id)
+    {
+        if (!IsCurrentUser) return;
+
+        Skill? skill = await SkillRepo.GetAsync(f => f.Id == Id);
+        if (skill is not null)
+        {
+            await SkillRepo.RemoveAsync(skill);
+            await GetSkills();
+        }
+    }
+}

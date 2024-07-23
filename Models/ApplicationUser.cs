@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NetCareer.Models
 {
@@ -7,6 +8,8 @@ namespace NetCareer.Models
     {
         public DateTime CreatedAt { get; set; }
         public DateTime? LastLogin { get; set; }
+        [NotMapped]
+        public string? Role { get; set; }
     }
 
 }

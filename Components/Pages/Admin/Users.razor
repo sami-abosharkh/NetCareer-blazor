@@ -1,0 +1,232 @@
+﻿@page "/admin/users"
+
+@rendermode InteractiveServer
+
+@inject IJSRuntime JS
+@inject NavigationManager NavManager
+@inject UserManager<ApplicationUser> _userManager;
+
+@attribute [Authorize(Roles = SD.Role_Admin)]
+
+<PageTitle>Users Management</PageTitle>
+<br />
+<div class="container rounded bg-white pt-3 shadow-sm">
+    <h2 class="border-bottom">USERS MANAGEMENT</h2>
+    <div class="row mb-2">
+        <div class="col-8 d-flex text-start">
+            <ActionConfirmation DeleteCallBack="UnLockUser" Disable="!SelectedUsers.Any() || !SelectedUsers.All(f => f.LockoutEnd > DateTime.Now)"
+                                Action="Unlock" ButtonColor="ButtonColor.Success"
+                                DialogTitle="Are you sure you want to unlock this User?"
+                                DialogMessage1="Do you want to proceed?">
+            </ActionConfirmation>
+            <div class="mx-1"></div>
+            <div class="input-group">
+                <ActionConfirmation DeleteCallBack="LockUser" Disable="!SelectedUsers.Any()"
+                                    Action="Lockout" ButtonColor="ButtonColor.Danger"
+                                    DialogTitle="Are you sure you want to lockout this User?"
+                                    DialogMessage1="Do you want to proceed?">
+                </ActionConfirmation>
+                <InputSelect @bind-Value="lockoutPeriod" class="form-control"
+                             @attributes='(!SelectedUsers.Any() ? new Dictionary<string, object> { { "disabled", true } } : null)'>
+                    @foreach (var period in Enum.GetValues(typeof(LockoutPeriod)).Cast<LockoutPeriod>())
+                    {
+                        <option value="@period">@period</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+        <div class="col-4 text-end">
+            <Button Type="ButtonType.Link" To="@($"/admin/user")" Color="ButtonColor.Primary" Outline="true">Create User</Button>
+        </div>
+    </div>
+
+    <Grid TItem="ApplicationUser"
+          Class="table table-hover table-bordered table-striped"
+          Data="UsersList"
+          AllowSorting="true"
+          AllowPaging="true"
+          AllowSelection="true" SelectionMode="GridSelectionMode.Multiple" SelectedItemsChanged="OnSelectedItemsChanged"
+          Responsive="true">
+
+        <GridColumns>
+            <GridColumn TItem="ApplicationUser" HeaderText="Email"
+                        PropertyName="Email" SortKeySelector="item => item.Email">
+                @context.Email
+            </GridColumn>
+            <GridColumn TItem="ApplicationUser" HeaderText="Phone Number"
+                        PropertyName="PhoneNumber" SortKeySelector="item => item.PhoneNumber">
+                @context.PhoneNumber
+            </GridColumn>
+            <GridColumn TItem="ApplicationUser" HeaderText="Role"
+                        PropertyName="Role" SortKeySelector="item => item.Role">@context.Role</GridColumn>
+            <GridColumn TItem="ApplicationUser" HeaderText="Created At"
+                        PropertyName="CreatedAt" SortKeySelector="item => item.CreatedAt">
+                @TimeSincePublished(context.CreatedAt)
+            </GridColumn>
+            <GridColumn TItem="ApplicationUser" HeaderText="Last Login"
+                        PropertyName="LastLogin" SortKeySelector="item => item.LastLogin">
+                @TimeSincePublished(context.LastLogin)
+            </GridColumn>
+            <GridColumn TItem="ApplicationUser" ColumnClass="@(x => x.LockoutEnd > DateTime.Now ? "table-danger" : "table-success")"
+                        HeaderText="Lockout End" PropertyName="LockoutEnd" SortKeySelector="item => item.LockoutEnd">
+                @context.LockoutEnd
+            </GridColumn>
+            <GridColumn TItem="ApplicationUser" HeaderText="Profile" PropertyName="Profile">
+                <Button Type="ButtonType.Button" Class="w-100" @onclick='() => OpenInNewTab($"/Profile?id={context.Id}")'>
+                    Profile
+                </Button>
+            </GridColumn>
+        </GridColumns>
+    </Grid>
+</div>
+
+<Preload LoadingText="Loading..." />
+
+@code {
+    // Inject PreloadService to show and hide loading spinner
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    // List to hold all users
+    private List<ApplicationUser> UsersList { get; set; } = new();
+    // List to hold selected users
+    private List<ApplicationUser> SelectedUsers { get; set; } = new();
+
+    private LockoutPeriod lockoutPeriod = LockoutPeriod.HalfHour;
+
+    // Define the LockoutPeriod enum
+    public enum LockoutPeriod
+    {
+        FiveMinutes,
+        HalfHour,
+        OneHour,
+        OneDay,
+        OneWeek,
+        OneMonth
+    }
+
+    // On component initialization, get the list of users
+    protected override async Task OnInitializedAsync()
+    {
+        await GetUsers();
+    }
+
+    // Method to get users from the service
+    private async Task GetUsers()
+    {
+        // Show loading spinner
+        PreloadService.Show(SpinnerColor.Light, "Loading data...");
+
+        // Get users from _userManager, excluding those with 'admin' in their email
+        UsersList = _userManager.Users.Where(f => !f.Email.Contains("admin")).ToList();
+
+        // Get roles for each user and assign it to the user object
+        foreach (var item in UsersList)
+        {
+            var roles = await _userManager.GetRolesAsync(item);
+            item.Role = string.Join(",", roles);
+        }
+
+        // Hide loading spinner
+        PreloadService.Hide();
+    }
+
+    // Method called when selected items change, updating the SelectedUsers list
+    private void OnSelectedItemsChanged(HashSet<ApplicationUser> aSelectedUsers)
+    {
+        var selectedUserHash = aSelectedUsers is not null && aSelectedUsers.Any() ? aSelectedUsers : new();
+        SelectedUsers = selectedUserHash.ToList();
+    }
+
+    // Method to lock selected users by setting their lockout end date to 5 minutes from now
+    private async Task LockUser()
+    {
+        if (SelectedUsers.Any())
+        {
+            List<ApplicationUser>? users = SelectedUsers;
+            DateTime lockoutEndDate = DateTime.Now;
+
+            switch (lockoutPeriod)
+            {
+                case LockoutPeriod.FiveMinutes:
+                    lockoutEndDate = lockoutEndDate.AddMinutes(5);
+                    break;
+                case LockoutPeriod.HalfHour:
+                    lockoutEndDate = lockoutEndDate.AddMinutes(30);
+                    break;
+                case LockoutPeriod.OneHour:
+                    lockoutEndDate = lockoutEndDate.AddHours(1);
+                    break;
+                case LockoutPeriod.OneDay:
+                    lockoutEndDate = lockoutEndDate.AddDays(1);
+                    break;
+                case LockoutPeriod.OneWeek:
+                    lockoutEndDate = lockoutEndDate.AddDays(7);
+                    break;
+                case LockoutPeriod.OneMonth:
+                    lockoutEndDate = lockoutEndDate.AddDays(30);
+                    break;
+            }
+
+            foreach (var user in users)
+                await _userManager.SetLockoutEndDateAsync(user, lockoutEndDate);
+
+            // Refresh the user list after locking
+            await GetUsers();
+        }
+    }
+
+    // Method to unlock selected users by setting their lockout end date to now
+    private async Task UnLockUser()
+    {
+        if (SelectedUsers.Any())
+        {
+            List<ApplicationUser>? users = SelectedUsers;
+
+            foreach (var user in users)
+                await _userManager.SetLockoutEndDateAsync(user, DateTime.Now);
+
+            // Refresh the user list after unlocking
+            await GetUsers();
+        }
+    }
+
+    // Method to open a URL in a new tab using JavaScript interop
+    private async Task OpenInNewTab(string URL) => await JS.InvokeVoidAsync("openInNewTab", URL);
+
+    // Method to calculate the time since a given date and return a human-readable string
+    private string TimeSincePublished(DateTime? date)
+    {
+        string text = "";
+
+        // Calculate the time difference from the provided date
+        if (date is not null)
+        {
+            TimeSpan timeSpan = DateTime.Now - (DateTime)date;
+            if (timeSpan.TotalMinutes < 1)
+            {
+                text = "just now";
+            }
+            else if (timeSpan.TotalMinutes < 60)
+            {
+                text = $"{(int)timeSpan.TotalMinutes} mins ago";
+            }
+            else if (timeSpan.TotalHours < 24)
+            {
+                text = $"{(int)timeSpan.TotalHours} hours ago";
+            }
+            else if (timeSpan.TotalDays < 30)
+            {
+                text = $"{(int)timeSpan.TotalDays} days ago";
+            }
+            else if (timeSpan.TotalDays < 365)
+            {
+                text = $"{(int)(timeSpan.TotalDays / 30)} months ago";
+            }
+            else
+            {
+                text = $"{(int)(timeSpan.TotalDays / 365)} years ago";
+            }
+        }
+        return text;
+    }
+}

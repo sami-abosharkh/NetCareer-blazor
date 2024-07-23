@@ -1,6 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NetCareer.Models
@@ -12,12 +10,16 @@ namespace NetCareer.Models
         [ForeignKey("UserID")]
         public ApplicationUser? ApplicationUser { get; set; }
         [Required]
-        public required string Title { get; set; }
+        public string? Title { get; set; }
         [Required]
         [MaxLength(2000)]
         public string? Description { get; set; }
         [Required]
         public string? Company { get; set; }
+        [Required]
+        public string? JobType { get; set; }
+        [Required]
+        public string? WorkArrangement { get; set; }
         [Required]
         public string? Position { get; set; }
         [Required]

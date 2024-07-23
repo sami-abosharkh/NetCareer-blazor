@@ -1,14 +1,51 @@
 ﻿<ConfirmDialog @ref="dialog" />
 
-<Button Type="ButtonType.Button"
-        @onclick="ConfirmationAsync"
-        Color="ButtonColor"
-        Disabled="@(Object is null)">
-        @Action</Button>
+@if (Disable)
+{
+    if (Action.Equals("Trash"))
+    {
+        <Button Type="ButtonType.Button" Color="ButtonColor" Disabled="true">
+            <Icon Name="IconName.Trash" />
+        </Button>
+    }
+    else
+    {
+        <Button Type="ButtonType.Button" Color="ButtonColor" Disabled="true">@Action</Button>
+    }
+}
+else
+{
+    if (Action.Equals("Close"))
+    {
+        <Button Type="ButtonType.Button" Class="btn-close" @onclick="ConfirmationAsync" aria-label="Close"></Button>
+    }
+    else
+    {
+        @if (Action.Equals("Trash"))
+        {
+            <Button Type="ButtonType.Button"
+                    @onclick="ConfirmationAsync"
+                    Color="ButtonColor">
+                <Icon Name="IconName.Trash" />
+            </Button>
+
+        }
+        else
+        {
+            <Button Type="ButtonType.Button"
+                    @onclick="ConfirmationAsync"
+                    Color="ButtonColor">
+                @Action
+            </Button>
+        }
+    }
+}
 
 @code {
+    private ConfirmDialog dialog = default!;
+
     [Parameter]
-    public object? Object { get; set; }
+    public bool Disable { get; set; }
     [Parameter]
     public EventCallback DeleteCallBack { get; set; }
 
@@ -24,15 +61,13 @@
     [Parameter]
     public string DialogMessage2 { get; set; } = "";
 
-    private ConfirmDialog dialog = default!;
-
     private async Task ConfirmationAsync()
     {
         var options = new ConfirmDialogOptions
             {
                 IsVerticallyCentered = true,
-                YesButtonText = Action,
-                YesButtonColor = ButtonColor.Danger,
+                YesButtonText = Action.Equals("Close") || Action.Equals("Trash") ? "Delete" : Action,
+                YesButtonColor = ButtonColor,
                 NoButtonText = "Cancel",
                 NoButtonColor = ButtonColor.Secondary,
                 DialogCssClass = "text-start",
@@ -45,13 +80,9 @@
 
         if (confirmation)
         {
-            OnConfirm();
+            await OnConfirm();
         }
     }
 
-    private void OnConfirm()
-    {
-        if (Object is null) return;
-        DeleteCallBack.InvokeAsync();
-    }
+    private async Task OnConfirm() => await DeleteCallBack.InvokeAsync();
 }

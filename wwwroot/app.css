@@ -1,23 +1,22 @@
-:root {
-    --bs-btn-bg: #FFFFFF;
-}
-
 body {
-    height: 100%;
-    background-color: #f7f7f9;
+    background-color: #F0F0F0;
 }
 
-/*.bg-primary {
-    background-color: #747890 !important;
-}*/
+p {
+    margin: 0;
+}
 
-/*
---text: #050506;
---background: #f7f7f9;
---primary: #787b95;
---secondary: #c2b1b6;
---accent: #a7978e;
-*/
+.text-truncate-two {
+    text-align: justify;
+    -webkit-line-clamp: 2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.text-justify {
+    text-align: justify;
+}
 
 h1:focus {
     outline: none;

@@ -5,9 +5,11 @@
 @inject SignInManager<ApplicationUser> SignInManager
 
 <ul class="nav nav-pills flex-column">
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage" Match="NavLinkMatch.All">Profile</NavLink>
-    </li>
+    <AuthorizeView Roles="@SD.Role_JobSeeker">
+        <li class="nav-item">
+            <NavLink class="nav-link" href="Account/Manage" Match="NavLinkMatch.All">Profile</NavLink>
+        </li>
+    </AuthorizeView>
     <li class="nav-item">
         <NavLink class="nav-link" href="Account/Manage/Phone">Phone Number</NavLink>
     </li>

@@ -1,0 +1,139 @@
+﻿@page "/Recruiters/dashboard"
+
+@rendermode InteractiveServer
+
+@inject IJSRuntime JS
+@inject NavigationManager NavManager
+@inject IJobPostRepository JobPostRepo
+@inject IJobApplicationRepository JobApplicationRepo
+
+@attribute [Authorize(Roles = $"{SD.Role_Recruiter}")]
+
+<PageTitle>Dashboard</PageTitle>
+
+<br />
+<div class="container rounded bg-white pt-3 shadow-sm">
+    <h2 class="border-bottom">JOBS MANAGEMENT</h2>
+    <div class="row mb-2">
+        <div class="col-6 text-start">
+        </div>
+        <div class="col-6 text-end">
+            <Button Type="ButtonType.Link" To="@($"/Job")" Color="ButtonColor.Primary" Outline="true">New Post</Button>
+        </div>
+    </div>
+
+    <Grid TItem="JobPost"
+          Class="table table-hover table-bordered table-striped"
+          Data="JobPostsList"
+          AllowSorting="true"
+          AllowPaging="true" PageSize="10" PageSizeSelectorVisible="true" PageSizeSelectorItems="@(new int[] { 5,10,20 })" AutoHidePaging="true"
+          Responsive="true"
+          AllowRowClick="true"
+          OnRowClick="OnRowClick"
+          RowClass="@((JobPost) => (JobPost.ExpiresAt < DateTime.Now) ? " table-danger" : string.Empty)">
+
+        <GridColumns>
+            <GridColumn TItem="JobPost" HeaderText="Position" PropertyName="Position" SortKeySelector="item => item.Position">@context.Position</GridColumn>
+            <GridColumn TItem="JobPost" HeaderText="Company" PropertyName="Company" SortKeySelector="item => item.Company">@context.Company</GridColumn>
+            <GridColumn TItem="JobPost" HeaderText="Location" PropertyName="Location" SortKeySelector="item => item.Location">@context.Location</GridColumn>
+            <GridColumn TItem="JobPost" HeaderText="Posted At" PropertyName="PostedAt" SortKeySelector="item => item.PostedAt">@TimeSincePublished(context.PostedAt)</GridColumn>
+            <GridColumn TItem="JobPost" HeaderText="Expires At" PropertyName="ExpiresAt" SortKeySelector="item => item.ExpiresAt">@context.ExpiresAt</GridColumn>
+            <GridColumn TItem="JobPost" HeaderText="Applicants Total" PropertyName="ApplicantsTotal" SortKeySelector="item => item.ApplicantsTotal">@context.ApplicantsTotal</GridColumn>
+        </GridColumns>
+    </Grid>
+</div>
+
+<Preload LoadingText="Loading..." />
+
+@code {
+    // Inject the PreloadService to show and hide a loading spinner
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    // Cascading parameter to get the current authentication state
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+
+    // ClaimsPrincipal to store the current user's information
+    private string? CurrentUserId;
+
+    // List to hold job posts
+    private List<JobPost> JobPostsList { get; set; } = new();
+
+    // OnInitializedAsync is called when the component is initialized
+    protected override async Task OnInitializedAsync()
+    {
+        if (authenticationState is not null)
+        {
+            // Get the current authentication state
+            var authState = await authenticationState;
+
+            // Get the current user's ID
+            CurrentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            // Fetch job posts for the current user
+            await GetJobPosts();
+        }
+    }
+
+    // Method to fetch job posts from the repository
+    private async Task GetJobPosts()
+    {
+        // Show loading spinner
+        PreloadService.Show(SpinnerColor.Light, "Loading data...");
+
+        // Fetch job posts for the current user from the repository
+        JobPostsList = await JobPostRepo.GetAllAsync(filter: f => f.UserID == CurrentUserId);
+
+        // For each job post, get the total count of applicants
+        foreach (var item in JobPostsList)
+        {
+            item.ApplicantsTotal = await JobApplicationRepo.GetTotalCountAsync(
+                filter: f => f.JobPostID == item.Id &&
+                (f.ApplicationStatus == SD.ApplicationStatus_Applied || f.ApplicationStatus == SD.ApplicationStatus_Rejected));
+        }
+
+        // Hide loading spinner
+        PreloadService.Hide();
+    }
+
+    // Method to handle row click events in a grid
+    private async Task OnRowClick(GridRowEventArgs<JobPost> args) => await OpenInNewTab($"/Job/Manage/{args.Item.Id}");
+
+    // Method to open a URL in a new tab
+    private async Task OpenInNewTab(string URL) => await JS.InvokeVoidAsync("openInNewTab", URL);
+
+    // Method to calculate the time since a given date
+    private string TimeSincePublished(DateTime date)
+    {
+        string text = "";
+        // Calculate the time difference from the given date to now
+        var timeSpan = DateTime.Now - date;
+
+        // Determine the appropriate time string based on the time difference
+        if (timeSpan.TotalMinutes < 1)
+        {
+            text = "just now";
+        }
+        else if (timeSpan.TotalMinutes < 60)
+        {
+            text = $"{(int)timeSpan.TotalMinutes} mins ago";
+        }
+        else if (timeSpan.TotalHours < 24)
+        {
+            text = $"{(int)timeSpan.TotalHours} hours ago";
+        }
+        else if (timeSpan.TotalDays < 30)
+        {
+            text = $"{(int)timeSpan.TotalDays} days ago";
+        }
+        else if (timeSpan.TotalDays < 365)
+        {
+            text = $"{(int)timeSpan.TotalDays / 30} Months ago";
+        }
+        else
+        {
+            text = $"{(int)timeSpan.TotalDays / 365} years ago";
+        }
+        return text;
+    }
+}

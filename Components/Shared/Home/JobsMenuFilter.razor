@@ -1,0 +1,60 @@
+﻿@inject NavigationManager Navigation
+
+<Dropdown Color="DropdownColor.Secondary">
+    <DropdownToggleButton>Date Posted</DropdownToggleButton>
+    <DropdownMenu>
+        <DropdownItem To="/" Type="DropdownItemType.Link">Any</DropdownItem>
+        <DropdownItem To="/?Date=Today" Type="DropdownItemType.Link">Today</DropdownItem>
+        <DropdownItem To="/?Date=Week" Type="DropdownItemType.Link">This Week</DropdownItem>
+        <DropdownItem To="/?Date=Month" Type="DropdownItemType.Link">This Month</DropdownItem>
+    </DropdownMenu>
+</Dropdown>
+<Dropdown Color="DropdownColor.Secondary">
+    <DropdownToggleButton>Job Type</DropdownToggleButton>
+    <DropdownMenu>
+        <DropdownItem To="/" Type="DropdownItemType.Link">Any</DropdownItem>
+        <DropdownItem To="@($"/?JobType={@SD.JobType_FullTime}")" Type="DropdownItemType.Link" Active="@(Navigation.Uri.Contains(SD.JobType_FullTime))">@SD.JobType_FullTime</DropdownItem>
+        <DropdownItem To="@($"/?JobType={@SD.JobType_PartTime}")" Type="DropdownItemType.Link" Active="@(Navigation.Uri.Contains(SD.JobType_PartTime))">@SD.JobType_PartTime</DropdownItem>
+        <DropdownItem To="@($"/?JobType={@SD.JobType_Contract}")" Type="DropdownItemType.Link" Active="@(Navigation.Uri.Contains(SD.JobType_Contract))">@SD.JobType_Contract</DropdownItem>
+    </DropdownMenu>
+</Dropdown>
+<Dropdown Color="DropdownColor.Secondary">
+    <DropdownToggleButton>Arrangement</DropdownToggleButton> 
+    <DropdownMenu>
+        <DropdownItem To="/" Type="DropdownItemType.Link">Any</DropdownItem>
+        <DropdownItem To="@($"/?WorkArrangement={@SD.WorkArrangement_OnSite}")" Type="DropdownItemType.Link" Active="@(Navigation.Uri.Contains(SD.WorkArrangement_OnSite))">@SD.WorkArrangement_OnSite</DropdownItem>
+        <DropdownItem To="@($"/?WorkArrangement={@SD.WorkArrangement_Remote}")" Type="DropdownItemType.Link" Active="@(Navigation.Uri.Contains(SD.WorkArrangement_Remote))">@SD.WorkArrangement_Remote</DropdownItem>
+        <DropdownItem To="@($"/?WorkArrangement={@SD.WorkArrangement_Hybrid}")" Type="DropdownItemType.Link" Active="@(Navigation.Uri.Contains(SD.WorkArrangement_Hybrid))">@SD.WorkArrangement_Hybrid</DropdownItem>
+    </DropdownMenu>
+</Dropdown>
+<Dropdown Color="DropdownColor.Secondary">
+    <DropdownToggleButton>Location</DropdownToggleButton>
+    <DropdownMenu Class="px-4 py-3" Style="width: 400px;">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Location" @bind="locationFilter" @bind:event="oninput" @bind:after="FilterClear" />
+            <div class="input-group-append">
+                <button @onclick="FilterHandlerAsync" class="btn @(string.IsNullOrEmpty(locationFilter) ? "btn-outline-secondary" : "btn-secondary")" type="button">Search</button>
+            </div>
+        </div>
+    </DropdownMenu>
+</Dropdown>
+@code {
+    [Parameter]
+    public EventCallback<string> SearchOnClick { get; set; }
+
+    public string? locationFilter { get; set; }
+
+    private void FilterHandlerAsync()
+    {
+        SearchOnClick.InvokeAsync(locationFilter);
+    }
+
+    private void FilterClear()
+    {
+        if (string.IsNullOrEmpty(locationFilter))
+        {
+            SearchOnClick.InvokeAsync(string.Empty);
+        }
+    }
+
+}

@@ -1,5 +1,6 @@
 ﻿@inject IJobApplicationRepository JobApplicationRepo
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
 
 <Card Class="shadow-sm">
     <CardBody>
@@ -12,20 +13,27 @@
                 {
                     <Badge Color="BadgeColor.Light"
                            VisuallyHiddenText="Application Status">
-                        @JobApplication.ApplicationStatus</Badge>
+                        @JobApplication.ApplicationStatus
+                    </Badge>
                 }
             </div>
         </div>
 
-        <CardText Class="text-truncate">@JobPost.Description</CardText>
+        <CardText Class="text-truncate-two">@JobPost.Description</CardText>
+        <br />
         <div class="row">
             <div class="col-8 d-flex align-items-end">
-                <Badge Color="BadgeColor.Secondary" VisuallyHiddenText="Location">@JobPost.Location</Badge>
+                <Badge Color="BadgeColor.Secondary" VisuallyHiddenText="WorkArrangement"><i class="bi bi-geo-alt-fill"></i> @JobPost.Location</Badge>
                 &nbsp;
-                <Badge Color="BadgeColor.Success" VisuallyHiddenText="Job Type">Full-Time</Badge>
+                <Badge Color="BadgeColor.Warning" VisuallyHiddenText="WorkArrangement">@JobPost.WorkArrangement</Badge>
+                &nbsp;
+                <Badge Color="BadgeColor.Warning" VisuallyHiddenText="JobType">@JobPost.JobType</Badge>
             </div>
             <div class="col-4 text-end">
-                <Button Color="ButtonColor.Primary" To="@($"/JobPost/Details/{JobPost.Id}")" Type="ButtonType.Link">Details</Button>
+                <Button Type="ButtonType.Button" Color="ButtonColor.Dark"
+                        @onclick='() => OpenInNewTab($"/Job/Details/{JobPost.Id}")'>
+                    Details <Icon Name="IconName.BoxArrowUpRight" />
+                </Button>
             </div>
         </div>
     </CardBody>
@@ -37,7 +45,7 @@
 @code {
     [Parameter]
     public required JobPost JobPost { get; set; }
-    
+
     private JobApplication? JobApplication { get; set; } = default!;
     private string? userId;
 
@@ -71,10 +79,23 @@
         {
             text = $"{(int)timeSpan.TotalHours} hours ago";
         }
-        else
+        else if (timeSpan.TotalDays < 30)
         {
             text = $"{(int)timeSpan.TotalDays} days ago";
         }
+        else if (timeSpan.TotalDays < 365)
+        {
+            text = $"{(int)timeSpan.TotalDays / 30} Months ago";
+        }
+        else
+        {
+            text = $"{(int)timeSpan.TotalDays / 365} years ago";
+        }
         return text;
+    }
+
+    private async Task OpenInNewTab(string url)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", url);
     }
 }

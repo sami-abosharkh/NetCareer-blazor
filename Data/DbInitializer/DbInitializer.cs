@@ -72,7 +72,9 @@ namespace NetCareer.Data.DbInitializer
             ApplicationUser admin = new ApplicationUser()
             {
                 UserName = "admin@admin",
-                Email = "admin@admin"
+                Email = "admin@admin",
+                LockoutEnabled = false,
+                CreatedAt = DateTime.Now
             };
 
             var result = _userManager.CreateAsync(admin, "Admin121!").GetAwaiter().GetResult();

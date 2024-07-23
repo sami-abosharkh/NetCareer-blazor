@@ -1,0 +1,92 @@
+﻿<Modal @ref="modal" title="Education" UseStaticBackdrop="true" CloseOnEscape="false">
+    <BodyTemplate>
+        <p>
+            Enhance your profile by adding an education section.
+        </p>
+        <br />
+        <EditForm Model="UserInput" OnValidSubmit="Submit" FormName="EducationForm" method="post">
+            <DataAnnotationsValidator />
+
+            @if (UserInput.Id > 0)
+            {
+                <InputNumber @bind-Value="UserInput.Id" hidden />
+                <InputNumber @bind-Value="UserInput.ProfileID" hidden />
+            }
+
+            <div class="form-floating">
+                <InputText id="Degree" @bind-Value="UserInput.Degree" class="form-control" />
+                <label for="Degree" class="form-label">Degree</label>
+                <ValidationMessage For="@(() => UserInput.Degree)" class="text-danger" />
+            </div>
+
+            <div class="my-2"></div>
+            <div class="form-floating">
+                <InputText id="University" @bind-Value="UserInput.University" class="form-control" />
+                <label for="University" class="form-label">University</label>
+                <ValidationMessage For="@(() => UserInput.University)" class="text-danger" />
+            </div>
+
+            <div class="my-2"></div>
+            <div class="form-floating">
+                <InputDate id="StartYear" @bind-Value="UserInput.StartYear" class="form-control" Placeholder="Enter Date" />
+                <label for="StartYear" class="form-label">Start Year</label>
+                <ValidationMessage For="@(() => UserInput.StartYear)" class="text-danger" />
+            </div>
+
+            <div class="my-2"></div>
+            <div class="form-floating">
+                <InputDate id="EndYear" @bind-Value="UserInput.EndYear" class="form-control" Placeholder="Enter Date" />
+                <label for="EndYear" class="form-label">End Year</label>
+                <ValidationMessage For="@(() => UserInput.EndYear)" class="text-danger" />
+            </div>
+
+            <div class="my-3"></div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary w-50 shadow">Save</button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="OnHideModalClick">Cancel</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    private Modal modal = default!;
+
+    [Parameter]
+    public EventCallback<Education> EducationModelCallback { get; set; }
+
+    [Parameter]
+    public Education? Education { get; set; }
+
+    [SupplyParameterFromForm]
+    private Education UserInput { get; set; } = new();
+
+
+    protected override void OnParametersSet()
+    {
+        if (Education is not null)
+        {
+            UserInput = Education;
+        }
+        else
+        {
+            UserInput = new()
+                {
+                    StartYear = DateTime.Now,
+                    EndYear = DateTime.Now
+                };
+        }
+    }
+
+    public async Task OnShowModalClick() => await modal.ShowAsync();
+    private async Task OnHideModalClick() => await modal.HideAsync();
+
+    private async Task Submit()
+    {
+        await OnHideModalClick();
+        await EducationModelCallback.InvokeAsync(UserInput);
+        UserInput = new();
+    }
+}

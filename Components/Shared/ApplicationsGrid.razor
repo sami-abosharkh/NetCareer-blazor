@@ -1,6 +1,5 @@
 ﻿@inject NavigationManager NavManager
 @inject IJobApplicationRepository JobApplicationRepo
-@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IJSRuntime JS
 
 <Grid TItem="JobApplication"
@@ -19,8 +18,8 @@
         <GridColumn TItem="JobApplication" HeaderText="Company" PropertyName="Company" SortKeySelector="item => item.JobPost.Company">@context.JobPost.Company</GridColumn>
         <GridColumn TItem="JobApplication" HeaderText="Position" PropertyName="Position" SortKeySelector="item => item.JobPost.Position">@context.JobPost.Position</GridColumn>
         <GridColumn TItem="JobApplication" HeaderText="Location" PropertyName="Location" SortKeySelector="item => item.JobPost.Location">@context.JobPost.Location</GridColumn>
-        <GridColumn TItem="JobApplication" HeaderText="Posted At" PropertyName="PostedAt" SortKeySelector="item => item.JobPost.PostedAt">@TimeSince(context.JobPost.PostedAt)</GridColumn>
-        <GridColumn TItem="JobApplication" HeaderText="Applied At" PropertyName="AppliedAt" SortKeySelector="item => item.AppliedAt">@TimeSince(context.AppliedAt)</GridColumn>
+        <GridColumn TItem="JobApplication" HeaderText="Posted At" PropertyName="PostedAt" SortKeySelector="item => item.JobPost.PostedAt">@TimeSincePublished(context.JobPost.PostedAt)</GridColumn>
+        <GridColumn TItem="JobApplication" HeaderText="Applied At" PropertyName="AppliedAt" SortKeySelector="item => item.AppliedAt">@TimeSincePublished(context.AppliedAt)</GridColumn>
     </GridColumns>
     <GridDetailView TItem="JobApplication">
         <div class="row">
@@ -32,12 +31,6 @@
 
 <Preload LoadingText="Loading..." />
 
-<script>
-    function openInNewTab(url) {
-        window.open(url, '_blank');
-    }
-</script>
-
 @code {
     [Parameter]
     public required string ApplicationStatus { get; set; }
@@ -45,14 +38,20 @@
     [Inject] protected PreloadService PreloadService { get; set; } = default!;
 
     private List<JobApplication> JobApplicationList { get; set; } = default!;
+    
+    //Identity
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
     private ClaimsPrincipal user = new();
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private List<JobPost> JobPostsList { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
+        if (authenticationState is not null)
         {
-            AuthenticationState authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            user = authenticationState.User;
+            var authState = await authenticationState;
+            user = authState.User;
         }
     }
 
@@ -90,10 +89,10 @@
 
     private async Task OnRowClick(GridRowEventArgs<JobApplication> args)
     {
-        await JS.InvokeVoidAsync("openInNewTab", $"JobPost/Details/{args.Item.Id}");
+        await JS.InvokeVoidAsync("openInNewTab", $"Job/Details/{args.Item.JobPostID}");
     }
 
-    private string TimeSince(DateTime aDate)
+    private string TimeSincePublished(DateTime aDate)
     {
         string text = "";
         // Calculate the time difference from last updated
@@ -111,9 +110,17 @@
         {
             text = $"{(int)timeSpan.TotalHours} hours ago";
         }
-        else
+        else if (timeSpan.TotalDays < 30)
         {
             text = $"{(int)timeSpan.TotalDays} days ago";
+        }
+        else if (timeSpan.TotalDays < 365)
+        {
+            text = $"{(int)timeSpan.TotalDays / 30} Months ago";
+        }
+        else
+        {
+            text = $"{(int)timeSpan.TotalDays / 365} years ago";
         }
         return text;
     }
