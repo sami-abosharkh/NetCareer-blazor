@@ -14,10 +14,10 @@
 @if (Profile is not null)
 {
     <PageTitle>@($"{Profile.FirstName} {Profile.LastName} - Profile")</PageTitle>
-    <div class="container rounded bg-white pt-3 shadow-sm">
+    <div class="container rounded bg-white py-3 shadow-sm">
         <div class="row mb-3">
             <div class="col-3">
-                <img class="border-4 img-thumbnail rounded mx-auto d-block" src="/Images/Profile/avatar.png" width="250" />
+                <img class="border-4 img-thumbnail rounded mx-auto d-block" src="@Profile.ProfilePicture" width="250" />
             </div>
             <div class="col-9">
                 <AboutSection FullName="@($"{Profile.FirstName} {Profile.LastName}")"

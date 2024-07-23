@@ -20,6 +20,6 @@ namespace NetCareer.Models
         [Required]
         public string? Location { get; set; }
         public string? Industry { get; set; }
-        public string? ProfilePicture { get; set; }
+        public required string ProfilePicture { get; set; }
     }
 }

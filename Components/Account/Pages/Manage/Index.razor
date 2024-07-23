@@ -1,7 +1,13 @@
 ﻿@page "/Account/Manage"
+
+@rendermode InteractiveServer
+
 @inject IProfileRepository ProfileRepo
 @inject NavigationManager NavManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IWebHostEnvironment Environment
+@inject IJSRuntime JS
+
+@attribute [Authorize]
 
 <PageTitle>Manage Profile</PageTitle>
 
@@ -32,16 +38,6 @@
                 </div>
             </div>
         </div>
-        <div class="form-floating mb-3">
-            <InputText id="headline" @bind-Value="ModelInput.Headline" class="form-control" autocomplete="Headline" aria-required="true" placeholder="Please enter Headline." />
-            <label for="headline" class="form-label">Headline</label>
-            <ValidationMessage For="@(() => ModelInput.Headline)" class="text-danger" />
-        </div>
-        <div class="form-floating mb-3">
-            <InputTextArea id="summary" @bind-Value="ModelInput.Summary" class="form-control" rows="10" autocomplete="Summary" aria-required="true" placeholder="Please enter Summary." />
-            <label for="summary" class="form-label">Summary</label>
-            <ValidationMessage For="@(() => ModelInput.Summary)" class="text-danger" />
-        </div>
         <div class="row mb-3">
             <div class="col-6">
                 <div class="form-floating">
@@ -58,52 +54,166 @@
                 </div>
             </div>
         </div>
+        <div class="form-floating mb-3">
+            <InputText id="headline" @bind-Value="ModelInput.Headline" class="form-control" autocomplete="Headline" aria-required="true" placeholder="Please enter Headline." />
+            <label for="headline" class="form-label">Headline</label>
+            <ValidationMessage For="@(() => ModelInput.Headline)" class="text-danger" />
+        </div>
+        <div class="form-group mb-3">
+            <label for="summary" class="form-label">Summary</label>
+            <InputTextArea id="summary" @bind-Value="ModelInput.Summary" class="form-control" rows="10" placeholder="Please enter Summary." />
+            <ValidationMessage For="@(() => ModelInput.Summary)" class="text-danger" />
+        </div>
+        <div class="row mb-3">
+            <div class="col-3">
+                <img id="imgPreview" class="border-4 img-thumbnail rounded mx-auto d-block" src="@ModelInput.ProfilePicture" width="250" />
+            </div>
+            <div class="col-9 d-flex flex-column justify-content-between">
+                <div>
+                    <label for="ProfilePicInput" class="form-label">Profile Picture</label>
+                    <InputFile id="ProfilePicInput" class="form-control" OnChange="OnImageChange"></InputFile>
+                </div>
+                @if (!ModelInput.ProfilePicture.Contains("avatar.png") || ImageFile is not null)
+                {
+                    <Button Class="align-self-end" Color="ButtonColor.Danger" @onclick="ClearImagePreview">Remove Image</Button>
+                }
+            </div>
+        </div>
         <button type="submit" class="btn btn-primary">Save</button>
     </EditForm>
 </div>
 
 @code {
     [SupplyParameterFromForm]
-    public Profile ModelInput { get; set; } = new();
+    private Profile ModelInput { get; set; } = new()
+        {
+            ProfilePicture = "/images/profile/avatar.png"
+        };
+
+    private Profile? Profile { get; set; } = default!;
 
     //Identity
     [CascadingParameter]
     private Task<AuthenticationState>? authenticationState { get; set; }
+    private string? CurrentUserId;
 
-    public Profile? Profile { get; set; } = default!;
+    //Image Upload
+    private IBrowserFile ImageFile = default!;
+    private const long MaxFileSize = 15 * 1024 * 1024; // 15 MB
+    private static readonly HashSet<string> AllowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png"
+    };
 
     protected override async Task OnInitializedAsync()
     {
         if (authenticationState is not null)
         {
             var authState = await authenticationState;
-            string? userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
+            CurrentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             List<string> userRoles = authState.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
 
             if (!userRoles.Contains(SD.Role_JobSeeker))
             {
                 NavManager.NavigateTo("/Account/Manage/Phone");
             }
+        }
+        await GetProfile();
+    }
 
-            Profile = await ProfileRepo.GetAsync(filter: f => f.UserID == userId);
+    private async Task GetProfile()
+    {
+        Profile = await ProfileRepo.GetAsync(filter: f => f.UserID == CurrentUserId);
 
-            if (Profile is not null)
+        if (Profile is not null)
+        {
+            if (ModelInput.UserID != CurrentUserId)
             {
-                if (ModelInput.UserID != userId)
-                {
-                    ModelInput = Profile;
-                }
-            }
-            else
-            {
-                ModelInput.UserID = userId;
+                ModelInput = Profile;
             }
         }
+        else
+        {
+            ModelInput.UserID = CurrentUserId;
+        }
+    }
+
+    private async Task OnImageChange(InputFileChangeEventArgs e)
+    {
+        var extension = Path.GetExtension(e.File.Name);
+
+        if (!AllowedExtensions.Contains(extension))
+        {
+            Console.WriteLine($"File extension {extension} is not allowed.");
+            ImageFile = default!;
+            return;
+        }
+
+        if (e.File.Size > MaxFileSize)
+        {
+            Console.WriteLine($"File size {e.File.Size} exceeds the maximum allowed size of {MaxFileSize} bytes.");
+            ImageFile = default!;
+            return;
+        }
+
+        ImageFile = e.File;
+        await JS.InvokeVoidAsync("previewImage", "ProfilePicInput", "imgPreview");
+
+    }
+
+    private async Task UpsertImage()
+    {
+        if (!string.IsNullOrEmpty(ModelInput.ProfilePicture))
+        {
+            if (!ModelInput.ProfilePicture.Contains("avatar.png"))
+            {
+                DeleteOldImage();
+            }
+        }
+
+        string fileName = Guid.NewGuid() + Path.GetExtension(ImageFile.Name);
+        string imageURL = @"images\profile\" + fileName;
+        string filePath = Path.Combine(Environment.WebRootPath, imageURL);
+
+        await using FileStream fs = new(filePath, FileMode.Create);
+        await ImageFile.OpenReadStream(MaxFileSize).CopyToAsync(fs);
+        ModelInput.ProfilePicture = imageURL;
+    }
+
+    private void DeleteOldImage()
+    {
+        string oldFilePath = Path.Combine(Environment.WebRootPath, ModelInput.ProfilePicture.TrimStart('\\'));
+
+        if (System.IO.File.Exists(oldFilePath))
+        {
+            System.IO.File.Delete(oldFilePath);
+        }
+    }
+
+    private async Task ClearImagePreview()
+    {
+        ImageFile = default!;
+        await JS.InvokeVoidAsync("resetPreviewImage", "ProfilePicInput", "imgPreview");
     }
 
     private async Task OnValidSubmitAsync()
     {
+        if (ImageFile is not null)
+        {
+            await UpsertImage();
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(ModelInput.ProfilePicture))
+            {
+                if (!ModelInput.ProfilePicture.Contains("avatar.png"))
+                {
+                    DeleteOldImage();
+                }
+                ModelInput.ProfilePicture = "/images/profile/avatar.png";
+            }
+        }
+
         if (Profile is null)
         {
             await ProfileRepo.CreateAsync(ModelInput);
@@ -112,5 +222,7 @@
         {
             await ProfileRepo.UpdateAsync(ModelInput);
         }
+
+        NavManager.NavigateTo("/Profile");
     }
 }

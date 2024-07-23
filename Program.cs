@@ -89,10 +89,11 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-//app.MapFallback(context => {
-//    context.Response.Redirect("/NotFound");
-//    return Task.CompletedTask;
-//});
+app.MapFallback(context =>
+{
+    context.Response.Redirect("/NotFound");
+    return Task.CompletedTask;
+});
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
