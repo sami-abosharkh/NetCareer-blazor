@@ -1,0 +1,165 @@
+﻿@page "/Messages"
+
+@rendermode InteractiveServer
+
+@inject IMessageRepository MessagesRepo
+
+@attribute [Authorize]
+
+<PageTitle>Messages</PageTitle>
+
+<br />
+<div class="container bg-white px-0 shadow-sm">
+    <div class="d-flex h-100">
+        <div class="col-4 p-0">
+            <header class="navbar bg-light border-bottom border-3">
+                <div class="container-fluid">
+                    <span class="navbar-brand mb-0 h1"><i class="bi bi-chat-left-text"></i> Messages</span>
+                </div>
+            </header>
+            <div class="contacts-container">
+                @if (Contacts.Any())
+                {
+                    foreach (var item in Contacts)
+                    {
+                        <ContactItem Contact="item"></ContactItem>
+                    }
+                }
+            </div>
+        </div>
+        <div class="col-8">
+            <header class="navbar bg-light border-bottom border-3">
+                <div class="container-fluid">
+                    <span class="navbar-brand mb-0 h1">Conversation</span>
+                </div>
+            </header>
+            @if (Chat.Any())
+            {
+                <MessageSection Chat="Chat"></MessageSection>
+            }
+            @if (!string.IsNullOrEmpty(CurrentContactId))
+            {
+                <div class="mx-2">
+                    <EditForm method="post" Model="inputMessage" OnValidSubmit="SendMessage" FormName="SendMessageForm" Enhance>
+                        <DataAnnotationsValidator />
+                        <InputTextArea class="form-control" @bind-Value="inputMessage.Content" rows="3" placeholder="Write a message..."></InputTextArea>
+                        <ValidationMessage For="@(() => inputMessage.Content)" class="text-danger" />
+                        <div class="my-2"></div>
+                        <button type="submit" class="btn btn-primary px-5">Send</button>
+                    </EditForm>
+                </div>
+                <br />
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    // Parameter to get the user ID from the query string
+    [SupplyParameterFromQuery(Name = "id")]
+    public required string CurrentContactId { get; set; }
+
+    // Cascading parameter to get the current authentication state
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+    private string? CurrentUserId;
+
+    [SupplyParameterFromForm]
+    private InputMessage inputMessage { get; set; } = new();
+
+    private List<ContactDTO> Contacts = new();
+    private List<Message> Chat = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (authenticationState is not null)
+        {
+            // Get the current user's authentication state
+            var authState = await authenticationState;
+            CurrentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            await GetContacts();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(CurrentContactId))
+        {
+            await OpenChat();
+        }
+        else
+        {
+            Chat.Clear();
+        }
+    }
+
+    private async Task GetContacts()
+    {
+        if (string.IsNullOrEmpty(CurrentUserId)) return;
+
+        Contacts.Clear();
+        List<string> ContactsList = await MessagesRepo.GetUniqueContactsAsync(CurrentUserId);
+
+        foreach (var item in ContactsList)
+        {
+            Message? LastMessageInChat = await MessagesRepo.GetAsync(
+                orderBy: o => o.SentAt, ascending: false,
+                filter: f => (f.SenderID.Equals(item) && f.ReceiverID.Equals(CurrentUserId) || f.ReceiverID.Equals(item) && f.SenderID.Equals(CurrentUserId)),
+                includeProperties: "Sender,Receiver");
+
+            var newMessages = await MessagesRepo.GetTotalCountAsync(
+                filter: f => f.SenderID.Equals(item) && f.ReceiverID.Equals(CurrentUserId) && f.IsRead == false);
+
+            if (LastMessageInChat is not null)
+            {
+                ContactDTO contact = new()
+                    {
+                        ContactId = item,
+                        ContactName = LastMessageInChat.SenderID.Equals(CurrentUserId) ? LastMessageInChat.Receiver.Email : LastMessageInChat.Sender.Email,
+                        LastMessageDate = LastMessageInChat.SentAt,
+                        LastMessageContent = LastMessageInChat.Content,
+                        IsSent = LastMessageInChat.SenderID.Equals(CurrentUserId) ? true : false,
+                        IsRead = (newMessages > 0) ? false : true,
+                    };
+                Contacts.Add(contact);
+            }
+        }
+
+        Contacts = Contacts.OrderByDescending(e => e.LastMessageDate).ToList();
+    }
+
+    private async Task OpenChat()
+    {
+        if (string.IsNullOrEmpty(CurrentUserId)) return;
+
+        Chat = await MessagesRepo.GetAllAsync(
+                orderBy: o => o.SentAt,
+                filter: f => (f.SenderID.Equals(CurrentContactId) && f.ReceiverID.Equals(CurrentUserId) || f.ReceiverID.Equals(CurrentContactId) && f.SenderID.Equals(CurrentUserId)),
+                includeProperties: "Sender");
+    }
+
+    private async Task SendMessage()
+    {
+        Message message = new()
+            {
+                SenderID = CurrentUserId,
+                ReceiverID = CurrentContactId,
+                Content = inputMessage.Content,
+                SentAt = DateTime.Now,
+                IsRead = false
+            };
+
+        await MessagesRepo.CreateAsync(message);
+        await OpenChat();
+        await GetContacts();
+        inputMessage = new();
+    }
+
+    private sealed class InputMessage
+    {
+        [Required, MaxLength(250)]
+        [Display(Name = "Message")]
+        public string? Content { get; set; }
+    }
+}

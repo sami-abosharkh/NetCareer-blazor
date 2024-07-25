@@ -18,11 +18,16 @@
         <h2 class="border-bottom">POST MANAGEMENT</h2>
         <div class="mb-3">
             <Card Class="shadow-sm">
-                <CardHeader>Summary</CardHeader>
+                <CardHeader Class="d-flex justify-content-between">
+                    <div>Summary</div>
+                    @if (JobPost.ExpiresAt < DateTime.Now)
+                    {
+                        <Badge Color="BadgeColor.Danger" VisuallyHiddenText="Expired">Expired</Badge>
+                    }
+                </CardHeader>
                 <CardBody>
                     <CardTitle>@JobPost.Title</CardTitle>
                     <CardText Class="text-truncate-two">@JobPost.Description</CardText>
-
                 </CardBody>
             </Card>
         </div>
@@ -43,7 +48,7 @@
         </div>
     </div>
     <br />
-    <div class="container rounded bg-white py-3 shadow-sm">
+    <div class="container rounded bg-white pt-3 shadow-sm">
         <h2 class="border-bottom">APPLICANTS MANAGEMENT</h2>
         <div class="row mb-2">
             <div class="col-6 text-start">
@@ -63,7 +68,15 @@
                 </ActionConfirmation>
             </div>
             <div class="col-6 text-end">
-                <Button Type="ButtonType.Button" Color="ButtonColor.Primary" Disabled="true">Message</Button>
+                @if (selectedApplication is null)
+                {
+                    <Button Type="ButtonType.Button" Color="ButtonColor.Primary" Disabled="true">Message</Button>
+                }
+                else
+                {
+                    <Button Type="ButtonType.Button" Color="ButtonColor.Primary" @onclick='() => OpenInNewTab($"/Messages?id={selectedApplication.UserID}")'>Message</Button>
+                }
+
             </div>
         </div>
 
@@ -143,12 +156,12 @@
         if (UserRoles.Contains(SD.Role_Admin))
         {
             // Get the job post by ID for admin
-            JobPost = await JobPostRepo.GetAsync(x => x.Id == CurrentJobPostId);
+            JobPost = await JobPostRepo.GetAsync(filter: x => x.Id == CurrentJobPostId);
         }
         else
         {
             // Get the job post by ID and user ID for non-admin users
-            JobPost = await JobPostRepo.GetAsync(x => x.Id == CurrentJobPostId && x.UserID == userId);
+            JobPost = await JobPostRepo.GetAsync(filter: x => x.Id == CurrentJobPostId && x.UserID == userId);
         }
 
         // Get the job applications for the job post

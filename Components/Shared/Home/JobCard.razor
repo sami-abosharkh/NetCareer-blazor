@@ -56,7 +56,7 @@
             AuthenticationState authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             userId = authenticationState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            JobApplication = await JobApplicationRepo.GetAsync(f => f.JobPostID == JobPost.Id && f.UserID == userId);
+            JobApplication = await JobApplicationRepo.GetAsync(filter: f => (f.JobPostID == JobPost.Id && f.UserID == userId));
             StateHasChanged();
         }
     }

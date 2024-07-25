@@ -11,17 +11,14 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Log in</PageTitle>
-<h1>Log in</h1>
-<div class="row">
-    <div class="col-md-4">
-        <section>
+<div class="container">
+    <TitleComponent Title="Log in" Header="Log in"></TitleComponent>
+    <Card Class="shadow">
+        <CardBody>
+            <CardTitle Class="mb-2">Use a local account to log in.</CardTitle>
             <StatusMessage Message="@errorMessage" />
             <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
-                <h2>Use a local account to log in.</h2>
-                <hr />
-                <ValidationSummary class="text-danger" role="alert" />
                 <div class="form-floating mb-3">
                     <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
                     <label for="email" class="form-label">Email</label>
@@ -41,28 +38,20 @@
                 <div>
                     <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
                 </div>
-                <div>
-                    <p>
+                <div class="row mt-2">
+                    <div class="col-6">
                         <a href="Account/ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
+                    </div>
+                    <div class ="col-6 text-end">
                         <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new User</a>
-                    </p>
-                    <p>
-                        <a href="Account/ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
+                    </div>
                 </div>
             </EditForm>
-        </section>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
-            <ExternalLoginPicker />
-        </section>
-    </div>
+            @* <ExternalLoginPicker /> *@
+        </CardBody>
+    </Card>
 </div>
+
 @code {
     private string? errorMessage;
 
@@ -94,7 +83,7 @@
             Logger.LogInformation("JobPost logged in.");
             ApplicationUser? JobPost = await this.UserManager.FindByEmailAsync(Input.Email);
 
-            if(JobPost is not null)
+            if (JobPost is not null)
             {
                 JobPost.LastLogin = DateTime.Now;
                 await UserManager.UpdateAsync(JobPost);
@@ -111,7 +100,7 @@
         else if (result.IsLockedOut)
         {
             Logger.LogWarning("JobPost account locked out.");
-            
+
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else

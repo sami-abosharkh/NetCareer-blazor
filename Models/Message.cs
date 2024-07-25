@@ -1,20 +1,20 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NetCareer.Models
 {
     public class Message
     {
-        public int ID { get; set; }
+        public int Id { get; set; }
 
-        public int SenderID { get; set; }
+        public required string SenderID { get; set; }
         [ForeignKey("SenderID")]
         public ApplicationUser? Sender { get; set; }
-
-        public int ReceiverID { get; set; }
+        public required string ReceiverID { get; set; }
         [ForeignKey("ReceiverID")]
         public ApplicationUser? Receiver { get; set; }
-
-        public string? Content { get; set; }
+        [Required, MaxLength(250)]
+        public required string Content { get; set; }
         public DateTime SentAt { get; set; }
         public bool IsRead { get; set; }
     }

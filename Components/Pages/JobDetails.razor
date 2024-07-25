@@ -58,23 +58,52 @@
         </div>
 
         <hr />
-        <AuthorizeView Roles="@SD.Role_JobSeeker">
-            @if (!hasProfile)
-            {
-                <Alert Color="AlertColor.Warning" Dismissable="false">
-                    <Icon Name="IconName.ExclamationTriangleFill" class="me-2"></Icon>
-                    Create a profile in order to apply for this job, click on <a href="/Account/Manage">Link</a>
-                </Alert>
-            }
-            <div class="row">
-                <div class="col-6">
-                    @if (JobApplication is not null)
-                    {
-                        @if (JobApplication.ApplicationStatus.Equals(SD.ApplicationStatus_Applied))
+        @if (JobPost.ExpiresAt < DateTime.Now)
+        {
+            <Alert Color="AlertColor.Warning" Dismissable="false">
+                <Icon Name="IconName.ExclamationTriangleFill" class="me-2"></Icon>
+                We regret to inform you that this job post has expired and is no longer accepting applications.
+            </Alert>
+        }
+        else
+        {
+            <AuthorizeView Roles="@SD.Role_JobSeeker">
+                @if (!hasProfile)
+                {
+                    <Alert Color="AlertColor.Warning" Dismissable="false">
+                        <Icon Name="IconName.ExclamationTriangleFill" class="me-2"></Icon>
+                        Create a profile in order to apply for this job, click on <a href="/Account/Manage">Link</a>
+                    </Alert>
+                }
+                <div class="row">
+                    <div class="col-6">
+                        @if (JobApplication is not null)
                         {
-                            <Button Type="ButtonType.Button" Color="ButtonColor.Primary" Disabled>Applied</Button>
+                            @if (JobApplication.ApplicationStatus.Equals(SD.ApplicationStatus_Applied))
+                            {
+                                <Button Type="ButtonType.Button" Color="ButtonColor.Primary" Disabled>Applied</Button>
+                            }
+                            else if (JobApplication.ApplicationStatus.Equals(SD.ApplicationStatus_Saved))
+                            {
+                                if (!hasProfile)
+                                {
+                                    <Button Disabled="true" Type="ButtonType.Button" Color="ButtonColor.Primary">Apply</Button>
+                                }
+                                else
+                                {
+                                    <Button Type="ButtonType.Button" Color="ButtonColor.Primary"
+                                            @onclick="ApplyJobApplication">
+                                        Apply
+                                    </Button>
+                                }
+                                <text>&nbsp;</text>
+                                <Button Type="ButtonType.Button" Color="ButtonColor.Danger" Outline="true"
+                                        @onclick="UnsavedJobApplication">
+                                    Unsave
+                                </Button>
+                            }
                         }
-                        else if (JobApplication.ApplicationStatus.Equals(SD.ApplicationStatus_Saved))
+                        else
                         {
                             if (!hasProfile)
                             {
@@ -82,38 +111,19 @@
                             }
                             else
                             {
-                                <Button Type="ButtonType.Button" Color="ButtonColor.Primary"
-                                        @onclick="ApplyJobApplication">
+                                <Button Type="ButtonType.Button" Color="ButtonColor.Primary" @onclick="ApplyJobApplication">
                                     Apply
                                 </Button>
                             }
                             <text>&nbsp;</text>
-                            <Button Type="ButtonType.Button" Color="ButtonColor.Danger" Outline="true"
-                                    @onclick="UnsavedJobApplication">
-                                Unsave
+                            <Button Type="ButtonType.Button" Color="ButtonColor.Secondary" Outline="true" @onclick="SaveJobApplication">
+                                Save
                             </Button>
                         }
-                    }
-                    else
-                    {
-                        if (!hasProfile)
-                        {
-                            <Button Disabled="true" Type="ButtonType.Button" Color="ButtonColor.Primary">Apply</Button>
-                        }
-                        else
-                        {
-                            <Button Type="ButtonType.Button" Color="ButtonColor.Primary" @onclick="ApplyJobApplication">
-                                Apply
-                            </Button>
-                        }
-                        <text>&nbsp;</text>
-                        <Button Type="ButtonType.Button" Color="ButtonColor.Secondary" Outline="true" @onclick="SaveJobApplication">
-                            Save
-                        </Button>
-                    }
+                    </div>
                 </div>
-            </div>
-        </AuthorizeView>
+            </AuthorizeView>
+        }
     </div>
 }
 
@@ -156,7 +166,7 @@
     protected override async Task OnParametersSetAsync()
     {
         // Get the job post by its ID
-        JobPost = await JobPostRepo.GetAsync(x => x.Id == CurrentJobPostId);
+        JobPost = await JobPostRepo.GetAsync(filter: x => x.Id == CurrentJobPostId);
 
         if (JobPost is not null)
         {
@@ -171,7 +181,8 @@
     }
 
     // Method to fetch the job application for the current job post and user
-    private async Task GetJobApplication() => JobApplication = await JobApplicationRepo.GetAsync(f => f.JobPostID == JobPost.Id && f.UserID == userId);
+    private async Task GetJobApplication() => JobApplication = await JobApplicationRepo.GetAsync
+                                                                        (filter: f => (f.JobPostID == JobPost.Id && f.UserID.Equals(userId)));
 
     // Method to return the job post description as a MarkupString with <br> tags for new lines
     private MarkupString RawDescription()

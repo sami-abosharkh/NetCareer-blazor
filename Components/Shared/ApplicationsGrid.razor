@@ -11,7 +11,7 @@
       Responsive="true"
       AllowRowClick="true"
       OnRowClick="OnRowClick">
-    
+
     <GridColumns>
         <GridColumn TItem="JobApplication" HeaderText="Recruiter Email" PropertyName="RecruiterEmail" SortKeySelector="item => item.JobPost.ApplicationUser.Email">@context.JobPost.ApplicationUser.Email</GridColumn>
         <GridColumn TItem="JobApplication" HeaderText="JobSeeker Email" PropertyName="JobSeekerEmail" SortKeySelector="item => item.User.Email">@context.User.Email</GridColumn>
@@ -19,7 +19,19 @@
         <GridColumn TItem="JobApplication" HeaderText="Position" PropertyName="Position" SortKeySelector="item => item.JobPost.Position">@context.JobPost.Position</GridColumn>
         <GridColumn TItem="JobApplication" HeaderText="Location" PropertyName="Location" SortKeySelector="item => item.JobPost.Location">@context.JobPost.Location</GridColumn>
         <GridColumn TItem="JobApplication" HeaderText="Posted At" PropertyName="PostedAt" SortKeySelector="item => item.JobPost.PostedAt">@TimeSincePublished(context.JobPost.PostedAt)</GridColumn>
-        <GridColumn TItem="JobApplication" HeaderText="Applied At" PropertyName="AppliedAt" SortKeySelector="item => item.AppliedAt">@TimeSincePublished(context.AppliedAt)</GridColumn>
+        @if (ApplicationStatus.Equals(SD.ApplicationStatus_Applied))
+        {
+            <GridColumn TItem="JobApplication" HeaderText="Applied At" PropertyName="AppliedAt" SortKeySelector="item => item.AppliedAt">@TimeSincePublished(context.AppliedAt)</GridColumn>
+        }
+        else if (ApplicationStatus.Equals(SD.ApplicationStatus_Saved))
+        {
+            <GridColumn TItem="JobApplication" HeaderText="Saved At" PropertyName="SavedAt" SortKeySelector="item => item.AppliedAt">@TimeSincePublished(context.AppliedAt)</GridColumn>
+        }
+        else if (ApplicationStatus.Equals(SD.ApplicationStatus_Rejected))
+        {
+            <GridColumn TItem="JobApplication" HeaderText="Rejected At" PropertyName="RejectedAt" SortKeySelector="item => item.AppliedAt">@TimeSincePublished(context.AppliedAt)</GridColumn>
+        }
+
     </GridColumns>
     <GridDetailView TItem="JobApplication">
         <div class="row">
@@ -38,7 +50,7 @@
     [Inject] protected PreloadService PreloadService { get; set; } = default!;
 
     private List<JobApplication> JobApplicationList { get; set; } = default!;
-    
+
     //Identity
     [CascadingParameter]
     private Task<AuthenticationState>? authenticationState { get; set; }
@@ -67,7 +79,7 @@
             if (userRoles.Contains(SD.Role_Admin))
             {
                 JobApplicationList = await JobApplicationRepo.GetAllAsync(
-                    filter: (f => f.ApplicationStatus == ApplicationStatus), 
+                    filter: (f => f.ApplicationStatus == ApplicationStatus),
                     includeProperties: "JobPost.ApplicationUser,User");
             }
             else if (userRoles.Contains(SD.Role_JobSeeker))

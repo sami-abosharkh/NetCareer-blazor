@@ -1,0 +1,67 @@
+﻿@inject IJSRuntime JS
+
+<div class="chat-container">
+    @foreach (var item in Chat)
+    {
+        <div class="border-bottom">
+            <div class="d-flex p-2">
+                <div class="mx-2">
+                    <img src="https://cdn.vectorstock.com/i/preview-1x/46/73/person-gray-photo-placeholder-man-material-design-vector-23804673.webp"
+                         width="60">
+                </div>
+                <div class="w-100">
+                    <div class="d-flex justify-content-between">
+                        <a href="/Profile?id=@item.Sender.Id" class="fw-bold">@item.Sender.Email</a>
+                        <div>@TimeSincePublished(item.SentAt)</div>
+                    </div>
+                    <p>@item.Content</p>
+                </div>
+            </div>
+        </div>
+    }
+    <br />
+</div>
+
+
+@code {
+    [Parameter]
+    public List<Message> Chat { get; set; } = new();
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("scrollToBottom", ".chat-container");
+    }
+
+    private string TimeSincePublished(DateTime date)
+    {
+        string text = "";
+        // Calculate the time difference from last updated
+        var timeSpan = DateTime.Now - date;
+
+        if (timeSpan.TotalMinutes < 1)
+        {
+            text = "just now";
+        }
+        else if (timeSpan.TotalMinutes < 60)
+        {
+            text = $"{(int)timeSpan.TotalMinutes} mins ago";
+        }
+        else if (timeSpan.TotalHours < 24)
+        {
+            text = $"{(int)timeSpan.TotalHours} hours ago";
+        }
+        else if (timeSpan.TotalDays < 30)
+        {
+            text = $"{(int)timeSpan.TotalDays} days ago";
+        }
+        else if (timeSpan.TotalDays < 365)
+        {
+            text = $"{(int)timeSpan.TotalDays / 30} Months ago";
+        }
+        else
+        {
+            text = $"{(int)timeSpan.TotalDays / 365} years ago";
+        }
+        return text;
+    }
+}

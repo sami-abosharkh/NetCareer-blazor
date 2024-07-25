@@ -9,7 +9,7 @@
         }
         else
         {
-            <Button Class="align-self-start" Type="ButtonType.Button" Color="ButtonColor.Primary">Message</Button>
+            <Button Class="align-self-start" Type="ButtonType.Button" @onclick='() => OpenInNewTab($"/Messages?id={Id}")' Color="ButtonColor.Primary">Message</Button>
         }
     </AuthorizeView>
 </div>
@@ -49,6 +49,8 @@
 
 @code {
     [Parameter]
+    public string? Id { get; set; }
+    [Parameter]
     public string FullName { get; set; } = "";
     [Parameter]
     public string? Headline { get; set; }
@@ -76,6 +78,9 @@
             }
         }
     }
+
+    // Method to open a URL in a new tab using JavaScript interop
+    private async Task OpenInNewTab(string URL) => await JS.InvokeVoidAsync("openInNewTab", URL);
 
     private MarkupString RawDescription(string text)
     {

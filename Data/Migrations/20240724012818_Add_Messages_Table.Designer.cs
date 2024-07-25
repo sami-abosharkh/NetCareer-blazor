@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetCareer.Data;
 
@@ -11,9 +12,11 @@ using NetCareer.Data;
 namespace NetCareer.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240724012818_Add_Messages_Table")]
+    partial class Add_Messages_Table
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -255,7 +258,7 @@ namespace NetCareer.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Educations", (string)null);
+                    b.ToTable("Educations");
                 });
 
             modelBuilder.Entity("NetCareer.Models.Experience", b =>
@@ -295,7 +298,7 @@ namespace NetCareer.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Experiences", (string)null);
+                    b.ToTable("Experiences");
                 });
 
             modelBuilder.Entity("NetCareer.Models.JobApplication", b =>
@@ -332,7 +335,7 @@ namespace NetCareer.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("JobApplications", (string)null);
+                    b.ToTable("JobApplications");
                 });
 
             modelBuilder.Entity("NetCareer.Models.JobPost", b =>
@@ -388,7 +391,7 @@ namespace NetCareer.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("JobPosts", (string)null);
+                    b.ToTable("JobPosts");
                 });
 
             modelBuilder.Entity("NetCareer.Models.Message", b =>
@@ -422,7 +425,7 @@ namespace NetCareer.Migrations
 
                     b.HasIndex("SenderID");
 
-                    b.ToTable("Messages", (string)null);
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("NetCareer.Models.Profile", b =>
@@ -469,7 +472,7 @@ namespace NetCareer.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("Profiles", (string)null);
+                    b.ToTable("Profiles");
                 });
 
             modelBuilder.Entity("NetCareer.Models.Skill", b =>
@@ -496,7 +499,7 @@ namespace NetCareer.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("Skills", (string)null);
+                    b.ToTable("Skills");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

@@ -1,0 +1,58 @@
+﻿<NavLink class="contact-card border" href="@($"/Messages?id={Contact.ContactId}")" Match="NavLinkMatch.All">
+    <div class="text-start">
+        <div class="fw-bold text-break">@Contact.ContactName</div>
+        <div class="contact-truncate">@Contact.LastMessageContent</div>
+    </div>
+    <div class="d-flex flex-column justify-content-between align-items-end">
+        <div class="text-end">@TimeSincePublished()</div>
+        @if (Contact.IsSent)
+        {
+            <div><i class="bi bi-send"></i></div>
+        }
+        else
+        {
+            <div><i class="bi @(Contact.IsRead ? "bi-envelope-open" : "bi-envelope-fill")"></i></div>
+        }
+    </div>
+</NavLink>
+
+@code {
+    [Parameter]
+    public EventCallback<string> OnClick { get; set; }
+
+    [Parameter]
+    public required ContactDTO Contact { get; set; }
+
+    private string TimeSincePublished()
+    {
+        string text = "";
+        // Calculate the time difference from last updated
+        var timeSpan = DateTime.Now - Contact.LastMessageDate;
+
+        if (timeSpan.TotalMinutes < 1)
+        {
+            text = "just now";
+        }
+        else if (timeSpan.TotalMinutes < 60)
+        {
+            text = $"{(int)timeSpan.TotalMinutes} mins ago";
+        }
+        else if (timeSpan.TotalHours < 24)
+        {
+            text = $"{(int)timeSpan.TotalHours} hours ago";
+        }
+        else if (timeSpan.TotalDays < 30)
+        {
+            text = $"{(int)timeSpan.TotalDays} days ago";
+        }
+        else if (timeSpan.TotalDays < 365)
+        {
+            text = $"{(int)timeSpan.TotalDays / 30} Months ago";
+        }
+        else
+        {
+            text = $"{(int)timeSpan.TotalDays / 365} years ago";
+        }
+        return text;
+    }
+}

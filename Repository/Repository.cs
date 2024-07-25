@@ -56,14 +56,20 @@ namespace NetCareer.Repository
             }
         }
 
-        public async Task<T?> GetAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true, string? includeProperties = null)
+        public async Task<T?> GetAsync(Expression<Func<T, object>>? orderBy = null, bool ascending = true, Expression<Func<T, bool>>? filter = null, bool tracked = true, string? includeProperties = null)
         {
             using (var context = _contextFactory.CreateDbContext())
             {
                 IQueryable<T> query = tracked ? context.Set<T>() : context.Set<T>().AsNoTracking();
 
+                if (orderBy != null)
+                {
+                    query = ascending ? query.OrderBy(orderBy) : query.OrderByDescending(orderBy);
+                }
                 if (filter != null)
+                {
                     query = query.Where(filter);
+                }
 
                 if (!string.IsNullOrEmpty(includeProperties))
                 {

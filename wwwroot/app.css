@@ -6,6 +6,37 @@ p {
     margin: 0;
 }
 
+.contacts-container {
+    height: 60vh; /* Adjust this height as needed */
+    overflow-y: auto;
+}
+.chat-container {
+    height: 60vh; /* Adjust this height as needed */
+    overflow-y: auto;
+}
+.contact-card {
+    display: flex;
+    justify-content: space-between;
+    text-decoration: none;
+    color: inherit;
+    padding: .5rem;
+    width: 100%;
+}
+    .contact-card.active {
+        background-color: whitesmoke;
+    }
+
+    .contact-card:hover {
+        background-color: lightgray;
+    }
+
+.contact-truncate {
+    width: 200px; /* Set a fixed width */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .text-truncate-two {
     text-align: justify;
     -webkit-line-clamp: 2;
