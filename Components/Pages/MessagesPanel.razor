@@ -62,14 +62,21 @@
     // Cascading parameter to get the current authentication state
     [CascadingParameter]
     private Task<AuthenticationState>? authenticationState { get; set; }
+
+    // Store the current user's ID
     private string? CurrentUserId;
 
+    // Parameter to get message input from the form
     [SupplyParameterFromForm]
     private InputMessage inputMessage { get; set; } = new();
 
+    // List to store contacts
     private List<ContactDTO> Contacts = new();
+
+    // List to store chat messages
     private List<Message> Chat = new();
 
+    // Method to initialize the component
     protected override async Task OnInitializedAsync()
     {
         if (authenticationState is not null)
@@ -77,23 +84,25 @@
             // Get the current user's authentication state
             var authState = await authenticationState;
             CurrentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            await GetContacts();
         }
     }
 
+    // Method to handle parameter changes
     protected override async Task OnParametersSetAsync()
     {
         if (!string.IsNullOrEmpty(CurrentContactId))
         {
-            await OpenChat();
+            await OpenChat(); // Load chat messages
+            await ReadMessages(); // Mark messages as read
         }
         else
         {
-            Chat.Clear();
+            Chat.Clear(); // Clear chat if no contact ID is provided
         }
+        await GetContacts(); // Load contacts
     }
 
+    // Method to get the list of contacts
     private async Task GetContacts()
     {
         if (string.IsNullOrEmpty(CurrentUserId)) return;
@@ -103,16 +112,19 @@
 
         foreach (var item in ContactsList)
         {
+            // Get the last message in the chat with the contact
             Message? LastMessageInChat = await MessagesRepo.GetAsync(
                 orderBy: o => o.SentAt, ascending: false,
                 filter: f => (f.SenderID.Equals(item) && f.ReceiverID.Equals(CurrentUserId) || f.ReceiverID.Equals(item) && f.SenderID.Equals(CurrentUserId)),
                 includeProperties: "Sender,Receiver");
 
+            // Get the count of new messages from the contact
             var newMessages = await MessagesRepo.GetTotalCountAsync(
                 filter: f => f.SenderID.Equals(item) && f.ReceiverID.Equals(CurrentUserId) && f.IsRead == false);
 
             if (LastMessageInChat is not null)
             {
+                // Create a new contact DTO
                 ContactDTO contact = new()
                     {
                         ContactId = item,
@@ -126,19 +138,22 @@
             }
         }
 
+        // Order contacts by the date of the last message
         Contacts = Contacts.OrderByDescending(e => e.LastMessageDate).ToList();
     }
 
+    // Method to open a chat with a specific contact
     private async Task OpenChat()
     {
         if (string.IsNullOrEmpty(CurrentUserId)) return;
 
         Chat = await MessagesRepo.GetAllAsync(
-                orderBy: o => o.SentAt,
-                filter: f => (f.SenderID.Equals(CurrentContactId) && f.ReceiverID.Equals(CurrentUserId) || f.ReceiverID.Equals(CurrentContactId) && f.SenderID.Equals(CurrentUserId)),
-                includeProperties: "Sender");
+            orderBy: o => o.SentAt,
+            filter: f => (f.SenderID.Equals(CurrentContactId) && f.ReceiverID.Equals(CurrentUserId) || f.ReceiverID.Equals(CurrentContactId) && f.SenderID.Equals(CurrentUserId)),
+            includeProperties: "Sender");
     }
 
+    // Method to send a new message
     private async Task SendMessage()
     {
         Message message = new()
@@ -150,12 +165,31 @@
                 IsRead = false
             };
 
-        await MessagesRepo.CreateAsync(message);
-        await OpenChat();
-        await GetContacts();
-        inputMessage = new();
+        await MessagesRepo.CreateAsync(message); // Create the message in the repository
+        await OpenChat(); // Refresh the chat
+        await GetContacts(); // Refresh the contacts list
+        inputMessage = new(); // Clear the input message
     }
 
+    // Method to mark messages as read
+    private async Task ReadMessages()
+    {
+        if (string.IsNullOrEmpty(CurrentUserId)) return;
+        if (!Chat.Any()) return;
+
+        foreach (var message in Chat)
+        {
+            if (message.SenderID.Equals(CurrentContactId))
+            {
+                if (message.IsRead) continue;
+
+                message.IsRead = true; // Mark message as read
+                await MessagesRepo.UpdateAsync(message); // Update the message in the repository
+            }
+        }
+    }
+
+    // Class to represent the input message
     private sealed class InputMessage
     {
         [Required, MaxLength(250)]

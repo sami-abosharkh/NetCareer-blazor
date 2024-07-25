@@ -12,7 +12,7 @@
 
 @if (JobPost is not null)
 {
-    <div class="container rounded bg-white pt-3 shadow-sm">
+    <div class="container rounded bg-white py-3 shadow-sm">
         <h2 class="border-bottom">@(CurrentJobPostId.HasValue ? "EDIT POST" : "ADD POST")</h2>
         <EditForm Enhance Model="JobPost" OnValidSubmit="Submit" FormName="JobPostForm">
             <DataAnnotationsValidator />

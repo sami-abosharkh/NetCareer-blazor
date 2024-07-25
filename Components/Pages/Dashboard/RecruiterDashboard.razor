@@ -1,4 +1,5 @@
 ﻿@page "/Recruiters/dashboard"
+@page "/Admin/dashboard"
 
 @rendermode InteractiveServer
 
@@ -7,12 +8,12 @@
 @inject IJobPostRepository JobPostRepo
 @inject IJobApplicationRepository JobApplicationRepo
 
-@attribute [Authorize(Roles = $"{SD.Role_Recruiter}")]
+@attribute [Authorize(Roles = $"{SD.Role_Admin},{SD.Role_Recruiter}")]
 
 <PageTitle>Dashboard</PageTitle>
 
 <br />
-<div class="container rounded bg-white pt-3 shadow-sm">
+<div class="container rounded bg-white py-3 shadow-sm">
     <h2 class="border-bottom">JOBS MANAGEMENT</h2>
     <div class="row mb-2">
         <div class="col-6 text-start">
@@ -55,6 +56,7 @@
 
     // ClaimsPrincipal to store the current user's information
     private string? CurrentUserId;
+    private bool IsAdmin;
 
     // List to hold job posts
     private List<JobPost> JobPostsList { get; set; } = new();
@@ -69,6 +71,11 @@
 
             // Get the current user's ID
             CurrentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // Get the current user's roles
+            List<string> UserRoles = authState.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+
+            // Check if the user is an admin
+            IsAdmin = UserRoles.Contains(SD.Role_Admin) ? true : false;
 
             // Fetch job posts for the current user
             await GetJobPosts();
@@ -82,8 +89,15 @@
         PreloadService.Show(SpinnerColor.Light, "Loading data...");
 
         // Fetch job posts for the current user from the repository
-        JobPostsList = await JobPostRepo.GetAllAsync(filter: f => f.UserID == CurrentUserId);
-
+        if (IsAdmin)
+        {
+            JobPostsList = await JobPostRepo.GetAllAsync();
+        }
+        else
+        {
+            JobPostsList = await JobPostRepo.GetAllAsync(filter: f => f.UserID == CurrentUserId);
+        }
+        
         // For each job post, get the total count of applicants
         foreach (var item in JobPostsList)
         {
