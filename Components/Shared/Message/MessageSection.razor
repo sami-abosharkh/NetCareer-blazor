@@ -1,26 +1,24 @@
 ﻿@inject IJSRuntime JS
 
-<div class="chat-container">
-    @foreach (var item in Chat)
-    {
-        <div class="border-bottom">
-            <div class="d-flex p-2">
-                <div class="mx-2">
-                    <img src="https://cdn.vectorstock.com/i/preview-1x/46/73/person-gray-photo-placeholder-man-material-design-vector-23804673.webp"
-                         width="60">
+@foreach (var item in Chat)
+{
+    <div class="border-bottom">
+        <div class="d-flex p-2">
+            <div class="mx-2">
+                <img src="@item.ImageURL"
+                     width="60">
+            </div>
+            <div class="w-100">
+                <div class="d-flex justify-content-between">
+                    <a href="/Profile?id=@item.SenderID" class="fw-bold text-dark" style="text-decoration: none;">@item.Name</a>
+                    <div>@TimeSincePublished(item.SentAt)</div>
                 </div>
-                <div class="w-100">
-                    <div class="d-flex justify-content-between">
-                        <a href="/Profile?id=@item.Sender.Id" class="fw-bold">@item.Sender.Email</a>
-                        <div>@TimeSincePublished(item.SentAt)</div>
-                    </div>
-                    <p>@item.Content</p>
-                </div>
+                <p>@item.Content</p>
             </div>
         </div>
-    }
-    <br />
-</div>
+    </div>
+}
+<br />
 
 
 @code {

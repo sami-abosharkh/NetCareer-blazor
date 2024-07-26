@@ -48,17 +48,17 @@ else
             RedirectManager.RedirectTo("");
         }
 
-        var JobPost = await UserManager.FindByEmailAsync(Email);
-        if (JobPost is null)
+        var User = await UserManager.FindByEmailAsync(Email);
+        if (User is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = "Error finding JobPost for unspecified email";
+            statusMessage = "Error finding User for unspecified email";
         }
         else if (EmailSender is IdentityNoOpEmailSender)
         {
             // Once you add a real email sender, you should remove this code that lets you confirm the account
-            var userId = await UserManager.GetUserIdAsync(JobPost);
-            var code = await UserManager.GenerateEmailConfirmationTokenAsync(JobPost);
+            var userId = await UserManager.GetUserIdAsync(User);
+            var code = await UserManager.GenerateEmailConfirmationTokenAsync(User);
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
             emailConfirmationLink = NavigationManager.GetUriWithQueryParameters(
                 NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,

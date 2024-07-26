@@ -24,6 +24,7 @@ function resetPreviewImage(inputFileElement, imgElement) {
     input.value = '';
     image.src = '/images/profile/avatar.png';
 }
+
 function scrollToBottom(element) {
     const container = document.querySelector(element);
     container.scrollTop = container.scrollHeight;

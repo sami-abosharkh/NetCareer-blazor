@@ -12,7 +12,7 @@ namespace NetCareer.Components.Account
 
             if (User is null)
             {
-                redirectManager.RedirectToWithStatus("Account/InvalidUser", $"Error: Unable to load JobPost with ID '{userManager.GetUserId(context.User)}'.", context);
+                redirectManager.RedirectToWithStatus("Account/InvalidUser", $"Error: Unable to load User with ID '{userManager.GetUserId(context.User)}'.", context);
             }
 
             return User;

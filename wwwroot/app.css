@@ -7,7 +7,7 @@ p {
 }
 
 .contacts-container {
-    height: 60vh; /* Adjust this height as needed */
+    height: 65vh; /* Adjust this height as needed */
     overflow-y: auto;
 }
 .chat-container {

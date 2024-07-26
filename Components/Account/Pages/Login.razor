@@ -80,13 +80,13 @@
         var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
         if (result.Succeeded)
         {
-            Logger.LogInformation("JobPost logged in.");
-            ApplicationUser? JobPost = await this.UserManager.FindByEmailAsync(Input.Email);
+            Logger.LogInformation("User logged in.");
+            ApplicationUser? User = await this.UserManager.FindByEmailAsync(Input.Email);
 
-            if (JobPost is not null)
+            if (User is not null)
             {
-                JobPost.LastLogin = DateTime.Now;
-                await UserManager.UpdateAsync(JobPost);
+                User.LastLogin = DateTime.Now;
+                await UserManager.UpdateAsync(User);
             }
 
             RedirectManager.RedirectTo(ReturnUrl);
@@ -99,7 +99,7 @@
         }
         else if (result.IsLockedOut)
         {
-            Logger.LogWarning("JobPost account locked out.");
+            Logger.LogWarning("User account locked out.");
 
             RedirectManager.RedirectTo("Account/Lockout");
         }

@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace NetCareer.Components.Account
 {
-    // This is a server-side AuthenticationStateProvider that revalidates the security stamp for the connected JobPost
+    // This is a server-side AuthenticationStateProvider that revalidates the security stamp for the connected User
     // every 30 minutes an interactive circuit is connected.
     internal sealed class IdentityRevalidatingAuthenticationStateProvider(
             ILoggerFactory loggerFactory,
@@ -21,7 +21,7 @@ namespace NetCareer.Components.Account
         protected override async Task<bool> ValidateAuthenticationStateAsync(
             AuthenticationState authenticationState, CancellationToken cancellationToken)
         {
-            // Get the JobPost manager from a new scope to ensure it fetches fresh data
+            // Get the User manager from a new scope to ensure it fetches fresh data
             await using var scope = scopeFactory.CreateAsyncScope();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             return await ValidateSecurityStampAsync(userManager, authenticationState.User);

@@ -31,31 +31,31 @@
 </div>
 
 @code {
-    private ApplicationUser JobPost = default!;
+    private ApplicationUser User = default!;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
-        JobPost = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        User = await UserAccessor.GetRequiredUserAsync(HttpContext);
 
-        if (HttpMethods.IsGet(HttpContext.Request.Method) && !await UserManager.GetTwoFactorEnabledAsync(JobPost))
+        if (HttpMethods.IsGet(HttpContext.Request.Method) && !await UserManager.GetTwoFactorEnabledAsync(User))
         {
-            throw new InvalidOperationException("Cannot disable 2FA for JobPost as it's not currently enabled.");
+            throw new InvalidOperationException("Cannot disable 2FA for User as it's not currently enabled.");
         }
     }
 
     private async Task OnSubmitAsync()
     {
-        var disable2faResult = await UserManager.SetTwoFactorEnabledAsync(JobPost, false);
+        var disable2faResult = await UserManager.SetTwoFactorEnabledAsync(User, false);
         if (!disable2faResult.Succeeded)
         {
             throw new InvalidOperationException("Unexpected error occurred disabling 2FA.");
         }
 
-        var userId = await UserManager.GetUserIdAsync(JobPost);
-        Logger.LogInformation("JobPost with ID '{UserId}' has disabled 2fa.", userId);
+        var userId = await UserManager.GetUserIdAsync(User);
+        Logger.LogInformation("User with ID '{UserId}' has disabled 2fa.", userId);
         RedirectManager.RedirectToWithStatus(
             "Account/Manage/TwoFactorAuthentication",
             "2fa has been disabled. You can reenable 2fa when you setup an authenticator app",

@@ -41,7 +41,7 @@ namespace Microsoft.AspNetCore.Routing
             });
 
             accountGroup.MapPost("/Logout", async (
-                ClaimsPrincipal JobPost,
+                ClaimsPrincipal User,
                 SignInManager<ApplicationUser> signInManager,
                 [FromForm] string returnUrl) =>
             {
@@ -76,14 +76,14 @@ namespace Microsoft.AspNetCore.Routing
                 [FromServices] UserManager<ApplicationUser> userManager,
                 [FromServices] AuthenticationStateProvider authenticationStateProvider) =>
             {
-                var JobPost = await userManager.GetUserAsync(context.User);
-                if (JobPost is null)
+                var User = await userManager.GetUserAsync(context.User);
+                if (User is null)
                 {
-                    return Results.NotFound($"Unable to load JobPost with ID '{userManager.GetUserId(context.User)}'.");
+                    return Results.NotFound($"Unable to load User with ID '{userManager.GetUserId(context.User)}'.");
                 }
 
-                var userId = await userManager.GetUserIdAsync(JobPost);
-                downloadLogger.LogInformation("JobPost with ID '{UserId}' asked for their personal data.", userId);
+                var userId = await userManager.GetUserIdAsync(User);
+                downloadLogger.LogInformation("User with ID '{UserId}' asked for their personal data.", userId);
 
                 // Only include personal data for download
                 var personalData = new Dictionary<string, string>();
@@ -91,16 +91,16 @@ namespace Microsoft.AspNetCore.Routing
                     prop => Attribute.IsDefined(prop, typeof(PersonalDataAttribute)));
                 foreach (var p in personalDataProps)
                 {
-                    personalData.Add(p.Name, p.GetValue(JobPost)?.ToString() ?? "null");
+                    personalData.Add(p.Name, p.GetValue(User)?.ToString() ?? "null");
                 }
 
-                var logins = await userManager.GetLoginsAsync(JobPost);
+                var logins = await userManager.GetLoginsAsync(User);
                 foreach (var l in logins)
                 {
                     personalData.Add($"{l.LoginProvider} external login provider key", l.ProviderKey);
                 }
 
-                personalData.Add("Authenticator Key", (await userManager.GetAuthenticatorKeyAsync(JobPost))!);
+                personalData.Add("Authenticator Key", (await userManager.GetAuthenticatorKeyAsync(User))!);
                 var fileBytes = JsonSerializer.SerializeToUtf8Bytes(personalData);
 
                 context.Response.Headers.TryAdd("Content-Disposition", "attachment; filename=PersonalData.json");

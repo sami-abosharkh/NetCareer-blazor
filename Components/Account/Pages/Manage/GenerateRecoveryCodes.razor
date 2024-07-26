@@ -40,7 +40,7 @@ else
 
 @code {
     private string? message;
-    private ApplicationUser JobPost = default!;
+    private ApplicationUser User = default!;
     private IEnumerable<string>? recoveryCodes;
 
     [CascadingParameter]
@@ -48,21 +48,21 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        JobPost = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        User = await UserAccessor.GetRequiredUserAsync(HttpContext);
 
-        var isTwoFactorEnabled = await UserManager.GetTwoFactorEnabledAsync(JobPost);
+        var isTwoFactorEnabled = await UserManager.GetTwoFactorEnabledAsync(User);
         if (!isTwoFactorEnabled)
         {
-            throw new InvalidOperationException("Cannot generate recovery codes for JobPost because they do not have 2FA enabled.");
+            throw new InvalidOperationException("Cannot generate recovery codes for User because they do not have 2FA enabled.");
         }
     }
 
     private async Task OnSubmitAsync()
     {
-        var userId = await UserManager.GetUserIdAsync(JobPost);
-        recoveryCodes = await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(JobPost, 10);
+        var userId = await UserManager.GetUserIdAsync(User);
+        recoveryCodes = await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(User, 10);
         message = "You have generated new recovery codes.";
 
-        Logger.LogInformation("JobPost with ID '{UserId}' has generated new 2FA recovery codes.", userId);
+        Logger.LogInformation("User with ID '{UserId}' has generated new 2FA recovery codes.", userId);
     }
 }

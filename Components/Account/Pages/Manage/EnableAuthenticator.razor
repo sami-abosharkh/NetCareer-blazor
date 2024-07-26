@@ -70,7 +70,7 @@ else
     private const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
 
     private string? message;
-    private ApplicationUser JobPost = default!;
+    private ApplicationUser User = default!;
     private string? sharedKey;
     private string? authenticatorUri;
     private IEnumerable<string>? recoveryCodes;
@@ -83,9 +83,9 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        JobPost = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        User = await UserAccessor.GetRequiredUserAsync(HttpContext);
 
-        await LoadSharedKeyAndQrCodeUriAsync(JobPost);
+        await LoadSharedKeyAndQrCodeUriAsync(User);
     }
 
     private async Task OnValidSubmitAsync()
@@ -94,7 +94,7 @@ else
         var verificationCode = Input.Code.Replace(" ", string.Empty).Replace("-", string.Empty);
 
         var is2faTokenValid = await UserManager.VerifyTwoFactorTokenAsync(
-            JobPost, UserManager.Options.Tokens.AuthenticatorTokenProvider, verificationCode);
+            User, UserManager.Options.Tokens.AuthenticatorTokenProvider, verificationCode);
 
         if (!is2faTokenValid)
         {
@@ -102,15 +102,15 @@ else
             return;
         }
 
-        await UserManager.SetTwoFactorEnabledAsync(JobPost, true);
-        var userId = await UserManager.GetUserIdAsync(JobPost);
-        Logger.LogInformation("JobPost with ID '{UserId}' has enabled 2FA with an authenticator app.", userId);
+        await UserManager.SetTwoFactorEnabledAsync(User, true);
+        var userId = await UserManager.GetUserIdAsync(User);
+        Logger.LogInformation("User with ID '{UserId}' has enabled 2FA with an authenticator app.", userId);
 
         message = "Your authenticator app has been verified.";
 
-        if (await UserManager.CountRecoveryCodesAsync(JobPost) == 0)
+        if (await UserManager.CountRecoveryCodesAsync(User) == 0)
         {
-            recoveryCodes = await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(JobPost, 10);
+            recoveryCodes = await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(User, 10);
         }
         else
         {
@@ -118,19 +118,19 @@ else
         }
     }
 
-    private async ValueTask LoadSharedKeyAndQrCodeUriAsync(ApplicationUser JobPost)
+    private async ValueTask LoadSharedKeyAndQrCodeUriAsync(ApplicationUser User)
     {
         // Load the authenticator key & QR code URI to display on the form
-        var unformattedKey = await UserManager.GetAuthenticatorKeyAsync(JobPost);
+        var unformattedKey = await UserManager.GetAuthenticatorKeyAsync(User);
         if (string.IsNullOrEmpty(unformattedKey))
         {
-            await UserManager.ResetAuthenticatorKeyAsync(JobPost);
-            unformattedKey = await UserManager.GetAuthenticatorKeyAsync(JobPost);
+            await UserManager.ResetAuthenticatorKeyAsync(User);
+            unformattedKey = await UserManager.GetAuthenticatorKeyAsync(User);
         }
 
         sharedKey = FormatKey(unformattedKey!);
 
-        var email = await UserManager.GetEmailAsync(JobPost);
+        var email = await UserManager.GetEmailAsync(User);
         authenticatorUri = GenerateQrCodeUri(email!, unformattedKey!);
     }
 

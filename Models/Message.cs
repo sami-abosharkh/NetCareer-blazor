@@ -6,7 +6,6 @@ namespace NetCareer.Models
     public class Message
     {
         public int Id { get; set; }
-
         public required string SenderID { get; set; }
         [ForeignKey("SenderID")]
         public ApplicationUser? Sender { get; set; }
@@ -17,5 +16,11 @@ namespace NetCareer.Models
         public required string Content { get; set; }
         public DateTime SentAt { get; set; }
         public bool IsRead { get; set; }
+        
+        [NotMapped]
+        public string? Name { get; set; }
+        [NotMapped]
+        public string? ImageURL { get; set; }
+
     }
 }

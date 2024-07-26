@@ -66,14 +66,15 @@
         </div>
         <div class="row mb-3">
             <div class="col-3">
-                <img id="imgPreview" class="border-4 img-thumbnail rounded mx-auto d-block" src="@ModelInput.ProfilePicture" width="250" />
+                <img id="imgPreview" class="border-4 img-thumbnail rounded mx-auto d-block"
+                     src="@(string.IsNullOrEmpty(ModelInput.ProfilePicture) ? "/images/profile/avatar.png" : ModelInput.ProfilePicture)" width="250" />
             </div>
             <div class="col-9 d-flex flex-column justify-content-between">
                 <div>
                     <label for="ProfilePicInput" class="form-label">Profile Picture</label>
                     <InputFile id="ProfilePicInput" class="form-control" OnChange="OnImageChange"></InputFile>
                 </div>
-                @if (!ModelInput.ProfilePicture.Contains("avatar.png") || ImageFile is not null)
+                @if (!ModelInput.ProfilePicture.Contains("avatar.png") && !string.IsNullOrEmpty(ModelInput.ProfilePicture) || ImageFile is not null)
                 {
                     <Button Class="align-self-end" Color="ButtonColor.Danger" @onclick="ClearImagePreview">Remove Image</Button>
                 }
@@ -83,14 +84,16 @@
     </EditForm>
 </div>
 
-@code {
-    [SupplyParameterFromForm]
-    private Profile ModelInput { get; set; } = new()
-        {
-            ProfilePicture = "/images/profile/avatar.png"
-        };
+<Toasts class="p-3" AutoHide="true" Delay="4000" Placement="ToastsPlacement.TopRight" />
 
+@code {
+    [Inject] protected ToastService ToastService { get; set; } = default!;
+
+    //Database entity
     private Profile? Profile { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private Profile ModelInput { get; set; } = new() { ProfilePicture = "/images/profile/avatar.png" };
 
     //Identity
     [CascadingParameter]
@@ -98,6 +101,7 @@
     private string? CurrentUserId;
 
     //Image Upload
+    private string OldImage = string.Empty;
     private IBrowserFile ImageFile = default!;
     private const long MaxFileSize = 15 * 1024 * 1024; // 15 MB
     private static readonly HashSet<string> AllowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -111,14 +115,8 @@
         {
             var authState = await authenticationState;
             CurrentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            List<string> userRoles = authState.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
-
-            if (!userRoles.Contains(SD.Role_JobSeeker))
-            {
-                NavManager.NavigateTo("/Account/Manage/Phone");
-            }
+            await GetProfile();
         }
-        await GetProfile();
     }
 
     private async Task GetProfile()
@@ -131,10 +129,14 @@
             {
                 ModelInput = Profile;
             }
+            OldImage = Profile.ProfilePicture;
         }
         else
         {
-            ModelInput.UserID = CurrentUserId;
+            if (ModelInput.UserID != CurrentUserId)
+            {
+                ModelInput.UserID = CurrentUserId;
+            }
         }
     }
 
@@ -158,19 +160,10 @@
 
         ImageFile = e.File;
         await JS.InvokeVoidAsync("previewImage", "ProfilePicInput", "imgPreview");
-
     }
 
     private async Task UpsertImage()
     {
-        if (!string.IsNullOrEmpty(ModelInput.ProfilePicture))
-        {
-            if (!ModelInput.ProfilePicture.Contains("avatar.png"))
-            {
-                DeleteOldImage();
-            }
-        }
-
         string fileName = Guid.NewGuid() + Path.GetExtension(ImageFile.Name);
         string imageURL = @"images\profile\" + fileName;
         string filePath = Path.Combine(Environment.WebRootPath, imageURL);
@@ -178,38 +171,42 @@
         await using FileStream fs = new(filePath, FileMode.Create);
         await ImageFile.OpenReadStream(MaxFileSize).CopyToAsync(fs);
         ModelInput.ProfilePicture = imageURL;
-    }
-
-    private void DeleteOldImage()
-    {
-        string oldFilePath = Path.Combine(Environment.WebRootPath, ModelInput.ProfilePicture.TrimStart('\\'));
-
-        if (System.IO.File.Exists(oldFilePath))
-        {
-            System.IO.File.Delete(oldFilePath);
-        }
+        OldImage = imageURL;
     }
 
     private async Task ClearImagePreview()
     {
         ImageFile = default!;
+        ModelInput.ProfilePicture = string.Empty;
         await JS.InvokeVoidAsync("resetPreviewImage", "ProfilePicInput", "imgPreview");
+
+    }
+
+    private void DeleteOldImage()
+    {
+        if (!OldImage.Contains("avatar.png"))
+        {
+            string oldFilePath = Path.Combine(Environment.WebRootPath, OldImage.TrimStart('\\'));
+
+            if (System.IO.File.Exists(oldFilePath))
+            {
+                System.IO.File.Delete(oldFilePath);
+            }
+        }
     }
 
     private async Task OnValidSubmitAsync()
     {
         if (ImageFile is not null)
         {
+            DeleteOldImage();
             await UpsertImage();
         }
         else
         {
-            if (!string.IsNullOrEmpty(ModelInput.ProfilePicture))
+            if (!string.IsNullOrEmpty(OldImage))
             {
-                if (!ModelInput.ProfilePicture.Contains("avatar.png"))
-                {
-                    DeleteOldImage();
-                }
+                DeleteOldImage();
                 ModelInput.ProfilePicture = "/images/profile/avatar.png";
             }
         }
@@ -217,12 +214,36 @@
         if (Profile is null)
         {
             await ProfileRepo.CreateAsync(ModelInput);
+            try
+            {
+                // TODO: call the service/api to save the employee details
+
+                ToastService.Notify(new(ToastType.Success, "Your profile has been successfully created."));
+            }
+            catch (Exception ex)
+            {
+                // handle exception
+
+                ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+            }
+
         }
         else
         {
             await ProfileRepo.UpdateAsync(ModelInput);
-        }
+            try
+            {
+                // TODO: call the service/api to save the employee details
 
-        NavManager.NavigateTo("/Profile");
+                ToastService.Notify(new(ToastType.Success, "Your profile has been successfully updated. Please review the changes."));
+            }
+            catch (Exception ex)
+            {
+                // handle exception
+
+                ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+            }
+
+        }
     }
 }

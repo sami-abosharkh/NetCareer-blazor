@@ -16,4 +16,5 @@ namespace NetCareer.Data
         public DbSet<Experience> Experiences { get; set; }
         public DbSet<Message> Messages { get; set; }
     }
+
 }

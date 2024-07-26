@@ -32,16 +32,16 @@
             RedirectManager.RedirectTo("");
         }
 
-        var JobPost = await UserManager.FindByIdAsync(UserId);
-        if (JobPost is null)
+        var User = await UserManager.FindByIdAsync(UserId);
+        if (User is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = $"Error loading JobPost with ID {UserId}";
+            statusMessage = $"Error loading User with ID {UserId}";
         }
         else
         {
             var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
-            var result = await UserManager.ConfirmEmailAsync(JobPost, code);
+            var result = await UserManager.ConfirmEmailAsync(User, code);
             statusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
         }
     }

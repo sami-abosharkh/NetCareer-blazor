@@ -1,4 +1,5 @@
 ﻿<NavLink class="contact-card border" href="@($"/Messages?id={Contact.ContactId}")" Match="NavLinkMatch.All">
+    <img src="@Contact.ImageURL" width="50"/>
     <div class="text-start">
         <div class="fw-bold text-break">@Contact.ContactName</div>
         <div class="contact-truncate">@Contact.LastMessageContent</div>

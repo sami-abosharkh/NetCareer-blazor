@@ -98,7 +98,7 @@
 
     private async Task OnLoginCallbackAsync()
     {
-        // Sign in the JobPost with this external login provider if the JobPost already has a login.
+        // Sign in the User with this external login provider if the User already has a login.
         var result = await SignInManager.ExternalLoginSignInAsync(
             externalLoginInfo.LoginProvider,
             externalLoginInfo.ProviderKey,
@@ -118,7 +118,7 @@
             RedirectManager.RedirectTo("Account/Lockout");
         }
 
-        // If the JobPost does not have an account, then ask the JobPost to create an account.
+        // If the User does not have an account, then ask the User to create an account.
         if (externalLoginInfo.Principal.HasClaim(c => c.Type == ClaimTypes.Email))
         {
             Input.Email = externalLoginInfo.Principal.FindFirstValue(ClaimTypes.Email) ?? "";
@@ -128,27 +128,27 @@
     private async Task OnValidSubmitAsync()
     {
         var emailStore = GetEmailStore();
-        var JobPost = CreateUser();
+        var User = CreateUser();
 
-        await UserStore.SetUserNameAsync(JobPost, Input.Email, CancellationToken.None);
-        await emailStore.SetEmailAsync(JobPost, Input.Email, CancellationToken.None);
+        await UserStore.SetUserNameAsync(User, Input.Email, CancellationToken.None);
+        await emailStore.SetEmailAsync(User, Input.Email, CancellationToken.None);
 
-        var result = await UserManager.CreateAsync(JobPost);
+        var result = await UserManager.CreateAsync(User);
         if (result.Succeeded)
         {
-            result = await UserManager.AddLoginAsync(JobPost, externalLoginInfo);
+            result = await UserManager.AddLoginAsync(User, externalLoginInfo);
             if (result.Succeeded)
             {
-                Logger.LogInformation("JobPost created an account using {Name} provider.", externalLoginInfo.LoginProvider);
+                Logger.LogInformation("User created an account using {Name} provider.", externalLoginInfo.LoginProvider);
 
-                var userId = await UserManager.GetUserIdAsync(JobPost);
-                var code = await UserManager.GenerateEmailConfirmationTokenAsync(JobPost);
+                var userId = await UserManager.GetUserIdAsync(User);
+                var code = await UserManager.GenerateEmailConfirmationTokenAsync(User);
                 code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 
                 var callbackUrl = NavigationManager.GetUriWithQueryParameters(
                     NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
                     new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
-                await EmailSender.SendConfirmationLinkAsync(JobPost, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+                await EmailSender.SendConfirmationLinkAsync(User, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
                 // If account confirmation is required, we need to show the link if we don't have a real email sender
                 if (UserManager.Options.SignIn.RequireConfirmedAccount)
@@ -156,7 +156,7 @@
                     RedirectManager.RedirectTo("Account/RegisterConfirmation", new() { ["email"] = Input.Email });
                 }
 
-                await SignInManager.SignInAsync(JobPost, isPersistent: false, externalLoginInfo.LoginProvider);
+                await SignInManager.SignInAsync(User, isPersistent: false, externalLoginInfo.LoginProvider);
                 RedirectManager.RedirectTo(ReturnUrl);
             }
         }
@@ -181,7 +181,7 @@
     {
         if (!UserManager.SupportsUserEmail)
         {
-            throw new NotSupportedException("The default UI requires a JobPost store with email support.");
+            throw new NotSupportedException("The default UI requires a User store with email support.");
         }
         return (IUserEmailStore<ApplicationUser>)UserStore;
     }

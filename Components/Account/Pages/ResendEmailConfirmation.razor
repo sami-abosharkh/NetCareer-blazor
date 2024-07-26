@@ -41,20 +41,20 @@
 
     private async Task OnValidSubmitAsync()
     {
-        var JobPost = await UserManager.FindByEmailAsync(Input.Email!);
-        if (JobPost is null)
+        var User = await UserManager.FindByEmailAsync(Input.Email!);
+        if (User is null)
         {
             message = "Verification email sent. Please check your email.";
             return;
         }
 
-        var userId = await UserManager.GetUserIdAsync(JobPost);
-        var code = await UserManager.GenerateEmailConfirmationTokenAsync(JobPost);
+        var userId = await UserManager.GetUserIdAsync(User);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(User);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
             NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
-        await EmailSender.SendConfirmationLinkAsync(JobPost, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+        await EmailSender.SendConfirmationLinkAsync(User, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
         message = "Verification email sent. Please check your email.";
     }

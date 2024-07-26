@@ -92,7 +92,7 @@
             return;
         }
 
-        Logger.LogInformation("JobPost created a new account with password.");
+        Logger.LogInformation("User created a new account with password.");
 
         result = await UserManager.AddToRoleAsync(User, Input.Role);
 
@@ -139,7 +139,7 @@
     {
         if (!UserManager.SupportsUserEmail)
         {
-            throw new NotSupportedException("The default UI requires a JobPost store with email support.");
+            throw new NotSupportedException("The default UI requires a User store with email support.");
         }
         return (IUserEmailStore<ApplicationUser>)UserStore;
     }

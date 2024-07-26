@@ -66,7 +66,7 @@
 @code {
     public const string LinkLoginCallbackAction = "LinkLoginCallback";
 
-    private ApplicationUser JobPost = default!;
+    private ApplicationUser User = default!;
     private IList<UserLoginInfo>? currentLogins;
     private IList<AuthenticationScheme>? otherLogins;
     private bool showRemoveButton;
@@ -85,8 +85,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        JobPost = await UserAccessor.GetRequiredUserAsync(HttpContext);
-        currentLogins = await UserManager.GetLoginsAsync(JobPost);
+        User = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        currentLogins = await UserManager.GetLoginsAsync(User);
         otherLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync())
             .Where(auth => currentLogins.All(ul => auth.Name != ul.LoginProvider))
             .ToList();
@@ -94,7 +94,7 @@
         string? passwordHash = null;
         if (UserStore is IUserPasswordStore<ApplicationUser> userPasswordStore)
         {
-            passwordHash = await userPasswordStore.GetPasswordHashAsync(JobPost, HttpContext.RequestAborted);
+            passwordHash = await userPasswordStore.GetPasswordHashAsync(User, HttpContext.RequestAborted);
         }
 
         showRemoveButton = passwordHash is not null || currentLogins.Count > 1;
@@ -107,26 +107,26 @@
 
     private async Task OnSubmitAsync()
     {
-        var result = await UserManager.RemoveLoginAsync(JobPost, LoginProvider!, ProviderKey!);
+        var result = await UserManager.RemoveLoginAsync(User, LoginProvider!, ProviderKey!);
         if (!result.Succeeded)
         {
             RedirectManager.RedirectToCurrentPageWithStatus("Error: The external login was not removed.", HttpContext);
         }
 
-        await SignInManager.RefreshSignInAsync(JobPost);
+        await SignInManager.RefreshSignInAsync(User);
         RedirectManager.RedirectToCurrentPageWithStatus("The external login was removed.", HttpContext);
     }
 
     private async Task OnGetLinkLoginCallbackAsync()
     {
-        var userId = await UserManager.GetUserIdAsync(JobPost);
+        var userId = await UserManager.GetUserIdAsync(User);
         var info = await SignInManager.GetExternalLoginInfoAsync(userId);
         if (info is null)
         {
             RedirectManager.RedirectToCurrentPageWithStatus("Error: Could not load external login info.", HttpContext);
         }
 
-        var result = await UserManager.AddLoginAsync(JobPost, info);
+        var result = await UserManager.AddLoginAsync(User, info);
         if (!result.Succeeded)
         {
             RedirectManager.RedirectToCurrentPageWithStatus("Error: The external login was not added. External logins can only be associated with one account.", HttpContext);
