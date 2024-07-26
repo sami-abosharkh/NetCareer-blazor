@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NetCareer.Models
 {
@@ -11,6 +12,7 @@ namespace NetCareer.Models
         public required string UserID { get; set; }
         [ForeignKey("UserID")]
         public ApplicationUser? User { get; set; }
+        [MaxLength(3000)]
         public string? CoverLetter { get; set; }
         public string? Resume { get; set; }
         public DateTime AppliedAt { get; set; }

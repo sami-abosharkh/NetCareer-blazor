@@ -24,6 +24,10 @@ function resetPreviewImage(inputFileElement, imgElement) {
     input.value = '';
     image.src = '/images/profile/avatar.png';
 }
+function resetResumeInput(inputFileElement) {
+    let input = document.getElementById(inputFileElement)
+    input.value = '';
+}
 
 function scrollToBottom(element) {
     const container = document.querySelector(element);

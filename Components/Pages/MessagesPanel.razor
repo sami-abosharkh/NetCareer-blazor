@@ -59,107 +59,108 @@
             </div>
         </div>
     </div>
+</div>
 
-    @code {
-        // Parameter to get the user ID from the query string
-        [SupplyParameterFromQuery(Name = "id")]
-        public required string CurrentContactId { get; set; }
+@code {
+    // Parameter to get the user ID from the query string
+    [SupplyParameterFromQuery(Name = "id")]
+    public required string CurrentContactId { get; set; }
 
-        // Cascading parameter to get the current authentication state
-        [CascadingParameter]
-        private Task<AuthenticationState>? authenticationState { get; set; }
+    // Cascading parameter to get the current authentication state
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
 
-        // Store the current user's ID
-        private string CurrentUserId;
+    // Store the current user's ID
+    private string CurrentUserId;
 
-        // Parameter to get message input from the form
-        [SupplyParameterFromForm]
-        private InputMessage inputMessage { get; set; } = new();
+    // Parameter to get message input from the form
+    [SupplyParameterFromForm]
+    private InputMessage inputMessage { get; set; } = new();
 
-        // List to store contacts
-        private List<ContactDTO> Contacts { get; set; } = new();
-        private PersonalContactDTO PersonalContact { get; set; } = default!;
+    // List to store contacts
+    private List<ContactDTO> Contacts { get; set; } = new();
+    private PersonalContactDTO PersonalContact { get; set; } = default!;
 
-        // List to store chat messages
-        private List<Message> Chat = new();
+    // List to store chat messages
+    private List<Message> Chat = new();
 
-        // Method to initialize the component
-        protected override async Task OnInitializedAsync()
+    // Method to initialize the component
+    protected override async Task OnInitializedAsync()
+    {
+        if (authenticationState is not null)
         {
-            if (authenticationState is not null)
-            {
-                // Get the current user's authentication state
-                var authState = await authenticationState;
-                var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // Get the current user's authentication state
+            var authState = await authenticationState;
+            var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-                if (!string.IsNullOrEmpty(userId))
-                {
-                    CurrentUserId = userId;
-                    await GetPersonalContact();
-                }
+            if (!string.IsNullOrEmpty(userId))
+            {
+                CurrentUserId = userId;
+                await GetPersonalContact();
             }
         }
+    }
 
-        // Method to handle parameter changes
-        protected override async Task OnParametersSetAsync()
+    // Method to handle parameter changes
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(CurrentContactId))
         {
-            if (!string.IsNullOrEmpty(CurrentContactId))
-            {
-                await OpenChat(CurrentUserId, CurrentContactId); // Load chat messages
-                await ReadMessages(CurrentContactId); // Mark messages as read
-            }
-            else
-            {
-                Chat.Clear(); // Clear chat if no contact ID is provided
-            }
-
-            await GetContacts(); // Load contacts
+            await OpenChat(CurrentUserId, CurrentContactId); // Load chat messages
+            await ReadMessages(CurrentContactId); // Mark messages as read
+        }
+        else
+        {
+            Chat.Clear(); // Clear chat if no contact ID is provided
         }
 
-        private async Task GetPersonalContact()
-        {
-            if (string.IsNullOrEmpty(CurrentUserId)) return;
+        await GetContacts(); // Load contacts
+    }
 
-            var profile = await ProfileRepo.GetAsync(filter: f => f.UserID.Equals(CurrentUserId));
+    private async Task GetPersonalContact()
+    {
+        if (string.IsNullOrEmpty(CurrentUserId)) return;
 
-            PersonalContact = new()
+        var profile = await ProfileRepo.GetAsync(filter: f => f.UserID.Equals(CurrentUserId));
+
+        PersonalContact = new()
             {
                 ContactId = CurrentUserId,
                 ContactName = "Me",
                 ImageURL = (profile is not null) ? profile.ProfilePicture : "/images/profile/avatar.png"
             };
+    }
+
+    // Method to get the list of contacts
+    private async Task GetContacts()
+    {
+        if (string.IsNullOrEmpty(CurrentUserId)) return;
+
+        List<string> ContactsList = await MessagesRepo.GetUniqueContactsAsync(CurrentUserId);
+
+        if (Contacts.Any())
+        {
+            //Contacts.Clear();
         }
 
-        // Method to get the list of contacts
-        private async Task GetContacts()
+        foreach (var item in ContactsList)
         {
-            if (string.IsNullOrEmpty(CurrentUserId)) return;
+            // Get the last message in the chat with the contact
+            Message? LastMessageInChat = await MessagesRepo.GetAsync(
+            orderBy: o => o.SentAt, ascending: false,
+            filter: f => (f.SenderID.Equals(item) && f.ReceiverID.Equals(CurrentUserId) || f.ReceiverID.Equals(item) && f.SenderID.Equals(CurrentUserId)),
+            includeProperties: "Sender,Receiver");
 
-            List<string> ContactsList = await MessagesRepo.GetUniqueContactsAsync(CurrentUserId);
+            // Get the count of new messages from the contact
+            var newMessages = await MessagesRepo.GetTotalCountAsync(
+            filter: f => f.SenderID.Equals(item) && f.ReceiverID.Equals(CurrentUserId) && f.IsRead == false);
 
-            if (Contacts.Any())
+            if (LastMessageInChat is not null)
             {
-                //Contacts.Clear();
-            }
+                var profile = await ProfileRepo.GetAsync(filter: f => f.UserID.Equals(item));
 
-            foreach (var item in ContactsList)
-            {
-                // Get the last message in the chat with the contact
-                Message? LastMessageInChat = await MessagesRepo.GetAsync(
-                orderBy: o => o.SentAt, ascending: false,
-                filter: f => (f.SenderID.Equals(item) && f.ReceiverID.Equals(CurrentUserId) || f.ReceiverID.Equals(item) && f.SenderID.Equals(CurrentUserId)),
-                includeProperties: "Sender,Receiver");
-
-                // Get the count of new messages from the contact
-                var newMessages = await MessagesRepo.GetTotalCountAsync(
-                filter: f => f.SenderID.Equals(item) && f.ReceiverID.Equals(CurrentUserId) && f.IsRead == false);
-
-                if (LastMessageInChat is not null)
-                {
-                    var profile = await ProfileRepo.GetAsync(filter: f => f.UserID.Equals(item));
-
-                    // Create a new contact DTO
-                    ContactDTO contact = new()
+                // Create a new contact DTO
+                ContactDTO contact = new()
                     {
                         ContactId = item,
                         ContactName = string.Empty,
@@ -169,57 +170,57 @@
                         IsRead = (newMessages > 0) ? false : true,
                     };
 
-                    if (profile is not null)
-                    {
-                        contact.ContactName = $"{profile.FirstName} {profile.LastName}";
-                        contact.ImageURL = profile.ProfilePicture;
-                    }
-                    else
-                    {
-                        contact.ContactName = LastMessageInChat.SenderID.Equals(CurrentUserId) ? LastMessageInChat.Receiver.Email : LastMessageInChat.Sender.Email;
-                        contact.ImageURL = "/images/profile/avatar.png";
-                    }
-
-                    Contacts.Add(contact);
-                }
-            }
-
-            // Order contacts by the date of the last message
-            Contacts = Contacts.OrderByDescending(e => e.LastMessageDate).ToList();
-        }
-
-        // Method to open a chat with a specific contact
-        private async Task OpenChat(string userId, string contactId)
-        {
-            var contact = Contacts.Where(f => f.ContactId.Equals(contactId)).FirstOrDefault();
-
-            Chat = await MessagesRepo.GetAllAsync(
-            orderBy: o => o.SentAt,
-            filter: f => (f.SenderID.Equals(userId) && f.ReceiverID.Equals(contactId)) ||
-            (f.ReceiverID.Equals(userId) && f.SenderID.Equals(contactId)));
-
-            foreach (var msg in Chat)
-            {
-                if (msg.SenderID.Equals(CurrentUserId))
+                if (profile is not null)
                 {
-                    msg.ImageURL = PersonalContact.ImageURL;
-                    msg.Name = PersonalContact.ContactName;
+                    contact.ContactName = $"{profile.FirstName} {profile.LastName}";
+                    contact.ImageURL = profile.ProfilePicture;
                 }
                 else
                 {
-                    if (contact is not null)
-                    {
-                        msg.ImageURL = contact.ImageURL;
-                        msg.Name = contact.ContactName;
-                    }
+                    contact.ContactName = LastMessageInChat.SenderID.Equals(CurrentUserId) ? LastMessageInChat.Receiver.Email : LastMessageInChat.Sender.Email;
+                    contact.ImageURL = "/images/profile/avatar.png";
                 }
+
+                Contacts.Add(contact);
             }
         }
 
-        // Method to send a new message
-        private async Task SendMessage()
+        // Order contacts by the date of the last message
+        Contacts = Contacts.OrderByDescending(e => e.LastMessageDate).ToList();
+    }
+
+    // Method to open a chat with a specific contact
+    private async Task OpenChat(string userId, string contactId)
+    {
+        var contact = Contacts.Where(f => f.ContactId.Equals(contactId)).FirstOrDefault();
+
+        Chat = await MessagesRepo.GetAllAsync(
+        orderBy: o => o.SentAt,
+        filter: f => (f.SenderID.Equals(userId) && f.ReceiverID.Equals(contactId)) ||
+        (f.ReceiverID.Equals(userId) && f.SenderID.Equals(contactId)));
+
+        foreach (var msg in Chat)
         {
-            Message message = new()
+            if (msg.SenderID.Equals(CurrentUserId))
+            {
+                msg.ImageURL = PersonalContact.ImageURL;
+                msg.Name = PersonalContact.ContactName;
+            }
+            else
+            {
+                if (contact is not null)
+                {
+                    msg.ImageURL = contact.ImageURL;
+                    msg.Name = contact.ContactName;
+                }
+            }
+        }
+    }
+
+    // Method to send a new message
+    private async Task SendMessage()
+    {
+        Message message = new()
             {
                 SenderID = CurrentUserId,
                 ReceiverID = CurrentContactId,
@@ -228,34 +229,34 @@
                 IsRead = false
             };
 
-            await MessagesRepo.CreateAsync(message); // Create the message in the repository
-            await OpenChat(CurrentUserId, CurrentContactId); // Refresh the chat
-            await GetContacts(); // Refresh the contacts list
-            inputMessage = new(); // Clear the input message
-        }
+        await MessagesRepo.CreateAsync(message); // Create the message in the repository
+        await OpenChat(CurrentUserId, CurrentContactId); // Refresh the chat
+        await GetContacts(); // Refresh the contacts list
+        inputMessage = new(); // Clear the input message
+    }
 
-        // Method to mark messages as read
-        private async Task ReadMessages(string contactId)
+    // Method to mark messages as read
+    private async Task ReadMessages(string contactId)
+    {
+        if (!Chat.Any()) return;
+
+        foreach (var message in Chat)
         {
-            if (!Chat.Any()) return;
-
-            foreach (var message in Chat)
+            if (message.SenderID.Equals(contactId))
             {
-                if (message.SenderID.Equals(contactId))
-                {
-                    if (message.IsRead) continue;
+                if (message.IsRead) continue;
 
-                    message.IsRead = true; // Mark message as read
-                    await MessagesRepo.UpdateAsync(message); // Update the message in the repository
-                }
+                message.IsRead = true; // Mark message as read
+                await MessagesRepo.UpdateAsync(message); // Update the message in the repository
             }
         }
+    }
 
-        // Class to represent the input message
-        private sealed class InputMessage
-        {
-            [Required, MaxLength(250)]
-            [Display(Name = "Message")]
-            public string? Content { get; set; }
-        }
+    // Class to represent the input message
+    private sealed class InputMessage
+    {
+        [Required, MaxLength(250)]
+        [Display(Name = "Message")]
+        public string? Content { get; set; }
+    }
     }

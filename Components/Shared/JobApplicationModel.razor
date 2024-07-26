@@ -1,0 +1,104 @@
+﻿@inject IJSRuntime JS
+@inject IWebHostEnvironment Environment
+
+<Modal @ref="modal" title="Job Application" IsVerticallyCentered="true" IsScrollable="true" UseStaticBackdrop="true" CloseOnEscape="false">
+    <BodyTemplate>
+        <p>To apply for this position, please submit your resume along with a cover letter to enhance your application.</p>
+        <br />
+        <EditForm Model="InputModel" OnValidSubmit="Submit" FormName="SkillAddForm" method="post">
+            <DataAnnotationsValidator />
+            <div class="form-group mb-3">
+                <label for="Resume" class="form-label">Resume</label>
+                <InputFile id="Resume" class="form-control" OnChange="OnFileChange"></InputFile>
+            </div>
+            <div class="form-group mb-3">
+                <label for="CoverLetter" class="form-label">Cover Letter</label>
+                <InputTextArea id="CoverLetter" @bind-Value="InputModel.CoverLetter" class="form-control" rows="10" placeholder="Please write cover letter." />
+                <ValidationMessage For="@(() => InputModel.CoverLetter)" class="text-danger" />
+            </div>
+            <div class="my-3"></div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary w-50 shadow">Submit</button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="OnHideModalClick">Cancel</Button>
+    </FooterTemplate>
+</Modal>
+
+@code {
+    private Modal modal = default!;
+
+    [Parameter]
+    public EventCallback<JobApplication> JobApplicationModelCB { get; set; }
+
+    [SupplyParameterFromForm]
+    private JobApplication InputModel { get; set; } = new()
+    {
+        UserID = string.Empty,
+        ApplicationStatus = SD.ApplicationStatus_Applied
+    };
+
+    //Image Upload
+    private string OldImage = string.Empty;
+    private IBrowserFile File = default!;
+    private const long MaxFileSize = 15 * 1024 * 1024; // 15 MB
+    private static readonly HashSet<string> AllowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ".pdf"
+    };
+
+    public async Task OnShowModalClick() => await modal.ShowAsync();
+    private async Task OnHideModalClick() => await modal.HideAsync();
+
+    private async Task OnFileChange(InputFileChangeEventArgs e)
+    {
+        var extension = Path.GetExtension(e.File.Name);
+
+        if (!AllowedExtensions.Contains(extension))
+        {
+            Console.WriteLine($"File extension {extension} is not allowed.");
+            File = default!;
+            await JS.InvokeVoidAsync("resetResumeInput", "Resume");
+            return;
+        }
+
+        if (e.File.Size > MaxFileSize)
+        {
+            Console.WriteLine($"File size {e.File.Size} exceeds the maximum allowed size of {MaxFileSize} bytes.");
+            File = default!;
+            await JS.InvokeVoidAsync("resetResumeInput", "Resume");
+            return;
+        }
+        File = e.File;
+    }
+
+    private async Task UploadFile()
+    {
+        string fileName = Guid.NewGuid() + Path.GetExtension(File.Name);
+        string imageURL = @"resume\" + fileName;
+        string filePath = Path.Combine(Environment.WebRootPath, imageURL);
+
+        await using FileStream fs = new(filePath, FileMode.Create);
+        await File.OpenReadStream(MaxFileSize).CopyToAsync(fs);
+        InputModel.Resume = imageURL;
+    }
+
+    private async Task Submit()
+    {
+        if (File is not null)
+        {
+            await UploadFile();
+        }
+        
+        await JobApplicationModelCB.InvokeAsync(InputModel);
+        await OnHideModalClick();
+        
+        InputModel = new()
+            {
+                UserID = string.Empty,
+                ApplicationStatus = SD.ApplicationStatus_Applied
+            };
+    }
+}

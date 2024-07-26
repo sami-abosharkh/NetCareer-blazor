@@ -92,7 +92,7 @@
                                 else
                                 {
                                     <Button Type="ButtonType.Button" Color="ButtonColor.Primary"
-                                            @onclick="ApplyJobApplication">
+                                            @onclick="JobApplicationModelOpen">
                                         Apply
                                     </Button>
                                 }
@@ -111,7 +111,7 @@
                             }
                             else
                             {
-                                <Button Type="ButtonType.Button" Color="ButtonColor.Primary" @onclick="ApplyJobApplication">
+                                <Button Type="ButtonType.Button" Color="ButtonColor.Primary" @onclick="JobApplicationModelOpen">
                                     Apply
                                 </Button>
                             }
@@ -121,6 +121,7 @@
                             </Button>
                         }
                     </div>
+                    <JobApplicationModel @ref="JobApplicationModel" JobApplicationModelCB="ApplyJobApplication"></JobApplicationModel>
                 </div>
             </AuthorizeView>
         }
@@ -128,8 +129,7 @@
 }
 
 @code {
-    // Injecting ModalService to use modals within the component
-    [Inject] ModalService ModalService { get; set; } = default!;
+    private JobApplicationModel? JobApplicationModel;
 
     // Identity and Authentication
     // Cascading parameter to get the current authentication state
@@ -156,7 +156,7 @@
             var authState = await authenticationState;
             user = authState.User;
             userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
+
             // Check if the user has a profile
             Profile? HasProfile = await ProfileRepo.GetAsync(filter: f => f.UserID == userId);
             hasProfile = HasProfile is not null ? true : false;
@@ -228,7 +228,9 @@
     }
 
     // Method to apply for the job, setting the status to 'Applied'
-    private async Task ApplyJobApplication()
+    private async Task JobApplicationModelOpen() => await JobApplicationModel.OnShowModalClick();
+
+    private async Task ApplyJobApplication(JobApplication model)
     {
         if (string.IsNullOrEmpty(userId)) return;
 
@@ -243,12 +245,31 @@
                     ApplicationStatus = SD.ApplicationStatus_Applied
                 };
 
+            if (!string.IsNullOrEmpty(model.Resume))
+            {
+                JobApplication.Resume = model.Resume;
+            }
+            if (!string.IsNullOrEmpty(model.CoverLetter))
+            {
+                JobApplication.CoverLetter = model.CoverLetter;
+            }
+
             await JobApplicationRepo.CreateAsync(JobApplication);
         }
         else
         {
             // Update the existing job application's status to 'Applied'
             JobApplication.ApplicationStatus = SD.ApplicationStatus_Applied;
+            
+            if (!string.IsNullOrEmpty(model.Resume))
+            {
+                JobApplication.Resume = model.Resume;
+            }
+            if (!string.IsNullOrEmpty(model.CoverLetter))
+            {
+                JobApplication.CoverLetter = model.CoverLetter;
+            }
+
             await JobApplicationRepo.UpdateAsync(JobApplication);
         }
     }

@@ -96,8 +96,31 @@
                 <GridColumn TItem="JobApplication" HeaderText="Email" PropertyName="Email" SortKeySelector="item => item.User.Email">@context.User.Email</GridColumn>
                 <GridColumn TItem="JobApplication" HeaderText="Phone Number" PropertyName="PhoneNumber" SortKeySelector="item => item.User.PhoneNumber">@context.User.PhoneNumber</GridColumn>
                 <GridColumn TItem="JobApplication" HeaderText="Applied At" PropertyName="Applied At" SortKeySelector="item => item.AppliedAt">@TimeSinceApplied(context.AppliedAt)</GridColumn>
-                <GridColumn TItem="JobApplication" HeaderText="Resume" PropertyName="Resume" SortKeySelector="item => item.Resume">@context.Resume</GridColumn>
-                <GridColumn TItem="JobApplication" HeaderText="Cover Letter" PropertyName="CoverLetter" SortKeySelector="item => item.CoverLetter">@context.CoverLetter</GridColumn>
+                <GridColumn TItem="JobApplication" HeaderText="Resume" PropertyName="Resume" SortKeySelector="item => item.Resume">
+                    @if (string.IsNullOrEmpty(context.Resume))
+                    {
+                        <text>Empty</text>
+                    }
+                    else
+                    {
+                        <Button Type="ButtonType.Button" Class="w-100" @onclick='() => OpenInNewTab($"/{context.Resume}")'>
+                            Show
+                        </Button>
+                    }
+                    
+                </GridColumn>
+                <GridColumn TItem="JobApplication" HeaderText="Cover Letter" PropertyName="CoverLetter" SortKeySelector="item => item.CoverLetter">
+                    @if (string.IsNullOrEmpty(context.CoverLetter))
+                    {
+                        <text>Empty</text>
+                    }
+                    else
+                    {
+                        <Button Type="ButtonType.Button" Class="w-100" @onclick='() => OnShowModalClick(context.CoverLetter)'>
+                            Show
+                        </Button>
+                    }
+                </GridColumn>
                 <GridColumn TItem="JobApplication" HeaderText="Status" PropertyName="Status" SortKeySelector="item => item.ApplicationStatus">@context.ApplicationStatus</GridColumn>
                 <GridColumn TItem="JobApplication" HeaderText="Profile" PropertyName="Profile">
                     <Button Type="ButtonType.Button" Class="w-100" @onclick='() => OpenInNewTab($"/Profile?id={context.UserID}")'>
@@ -119,7 +142,18 @@
     </div>
 }
 
+<Modal @ref="modal" Title="Cover Letter" IsVerticallyCentered="true" IsScrollable="true" Size="ModalSize.Large">
+    <BodyTemplate>
+        @RawDescription()
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="OnHideModalClick">Close</Button>
+    </FooterTemplate>
+</Modal>
+
 @code {
+    private Modal modal = default!;
+
     // Cascading parameter to get the current authentication state
     [CascadingParameter]
     private Task<AuthenticationState>? authenticationState { get; set; }
@@ -135,6 +169,7 @@
     private List<JobApplication> JobApplicationsList { get; set; } = new();
     // Selected job application
     private JobApplication? selectedApplication = default!;
+    private string? selectedCoverLetter { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -247,6 +282,25 @@
             // Navigate to the dashboard after deleting the post
             NavManager.NavigateTo("/Recruiters/dashboard");
         }
+    }
+
+    private async Task OnShowModalClick(string content)
+    {
+        selectedCoverLetter = content;
+        await modal.ShowAsync();
+    }
+    private async Task OnHideModalClick() => await modal.HideAsync();
+
+    // Method to return the job post description as a MarkupString with <br> tags for new lines
+    private MarkupString RawDescription()
+    {
+        if (string.IsNullOrEmpty(selectedCoverLetter))
+        {
+            return new MarkupString(string.Empty);
+        }
+
+        var formattedText = selectedCoverLetter.Replace("\n", "<br>").Replace("\r", "");
+        return new MarkupString(formattedText);
     }
 
     // Method to calculate the time since an application was applied
