@@ -28,10 +28,9 @@
             </div>
         </div>
     </div>
-    <br />
     <div class="container">
         <div class="row">
-            <div class="col-6 ps-0">
+            <div class="col-sm-6 mt-3">
                 <Card Class="shadow-sm p-3 h-100">
                     <CardTitle><span class="border-bottom">Contact Information</span> <Icon Name="IconName.PersonVCard" /></CardTitle>
                     <CardText>
@@ -54,7 +53,7 @@
             </div>
             @if (Education is not null || IsCurrentUser == true)
             {
-                <div class="col-6 pe-0">
+                <div class="col-sm-6 mt-3">
                     <Card Class="shadow-sm p-3 h-100">
                         <CardTitle Class="d-flex justify-content-between align-items-center">
                             <div>
@@ -91,91 +90,93 @@
                 </div>
             }
         </div>
-        <br />
         @if (ExperiencesList.Any() || IsCurrentUser == true)
         {
-            <div class="row">
-                <Card Class="shadow-sm p-3">
-                    <CardTitle Class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="border-bottom">Work Experience</span> <Icon Name="IconName.Briefcase" />
-                        </div>
-                        @if (IsCurrentUser)
-                        {
-                            <Button Class="py-0" Type="ButtonType.Button" @onclick="() => ExperienceModelRef.OnShowModalClick()">Add <Icon Name="IconName.PlusCircle" /></Button>
-                        }
-                    </CardTitle>
-                    <CardText>
-                        @if (ExperiencesList.Any())
-                        {
-                            @foreach (var item in ExperiencesList)
+            <div class="row my-3">
+                <div class="col">
+                    <Card Class="shadow-sm p-3">
+                        <CardTitle Class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="border-bottom">Work Experience</span> <Icon Name="IconName.Briefcase" />
+                            </div>
+                            @if (IsCurrentUser)
                             {
-                                <ExperienceItem Experience="item"
-                                                ExperienceDeleteCallback="() => DeleteExperience(item.Id)"
-                                                ExperienceEditCallback="() => ExperienceModelRef.OnShowModalClick(item)"
-                                                IsCurrentUser="IsCurrentUser">
-                                </ExperienceItem>
-                                @if (item != ExperiencesList.Last())
+                                <Button Class="py-0" Type="ButtonType.Button" @onclick="() => ExperienceModelRef.OnShowModalClick()">Add <Icon Name="IconName.PlusCircle" /></Button>
+                            }
+                        </CardTitle>
+                        <CardText>
+                            @if (ExperiencesList.Any())
+                            {
+                                @foreach (var item in ExperiencesList)
                                 {
-                                    <hr />
+                                    <ExperienceItem Experience="item"
+                                                    ExperienceDeleteCallback="() => DeleteExperience(item.Id)"
+                                                    ExperienceEditCallback="() => ExperienceModelRef.OnShowModalClick(item)"
+                                                    IsCurrentUser="IsCurrentUser">
+                                    </ExperienceItem>
+                                    @if (item != ExperiencesList.Last())
+                                    {
+                                        <hr />
+                                    }
                                 }
                             }
-                        }
-                    </CardText>
-                </Card>
-                @if (IsCurrentUser)
-                {
-                    <ExperienceModel @ref="ExperienceModelRef" ExperienceModelCallback="UpsertExperience"></ExperienceModel>
-                }
+                        </CardText>
+                    </Card>
+                    @if (IsCurrentUser)
+                    {
+                        <ExperienceModel @ref="ExperienceModelRef" ExperienceModelCallback="UpsertExperience"></ExperienceModel>
+                    }
+                </div>
             </div>
-            <br />
         }
 
         @if (SkillsList.Any() || IsCurrentUser == true)
         {
-            <div class="row">
-                <Card Class="shadow-sm p-3">
-                    <CardTitle Class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="border-bottom">Skills</span> <Icon Name="IconName.Wrench" />
-                        </div>
+            <div class="row my-3">
+                <div class="col">
+                    <Card Class="shadow-sm p-3">
+                        <CardTitle Class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="border-bottom">Skills</span> <Icon Name="IconName.Wrench" />
+                            </div>
 
-                        @if (IsCurrentUser)
-                        {
-                            <Button Class="py-0" Type="ButtonType.Button" @onclick="() => SkillModelRef.OnShowModalClick()">Add <Icon Name="IconName.PlusCircle" /></Button>
-                        }
-                    </CardTitle>
-                    @if (SkillsList.Any())
-                    {
-                        <ul class="list-group">
-                            @foreach (var item in SkillsList)
+                            @if (IsCurrentUser)
                             {
-                                <li class="list-group-item">
-                                    <div class="d-flex justify-content-start align-items-center">
-                                        <div class="flex-grow-1">
-                                            <dt class="col-sm-2">@item.SkillName</dt>
-                                            <dd class="col-sm-6 m-0">@item.ProficiencyLevel</dd>
-                                        </div>
-                                        @if (IsCurrentUser)
-                                        {
-                                            <ActionConfirmation Action="Close" DeleteCallBack="() => DeleteSkill(item.Id)"
-                                                                DialogTitle="Are you sure you want to delete this Skill?"
-                                                                DialogMessage1="This will delete the Skill. Once deleted can not be rolled back."
-                                                                DialogMessage2="Do you want to proceed?">
-                                            </ActionConfirmation>
-                                        }
-                                    </div>
-                                </li>
+                                <Button Class="py-0" Type="ButtonType.Button" @onclick="() => SkillModelRef.OnShowModalClick()">Add <Icon Name="IconName.PlusCircle" /></Button>
                             }
+                        </CardTitle>
+                        @if (SkillsList.Any())
+                        {
+                            <ul class="list-group">
+                                @foreach (var item in SkillsList)
+                                {
+                                    <li class="list-group-item">
+                                        <div class="d-flex justify-content-start align-items-center">
+                                            <div class="flex-grow-1">
+                                                <dt class="col-sm-2">@item.SkillName</dt>
+                                                <dd class="col-sm-6 m-0">@item.ProficiencyLevel</dd>
+                                            </div>
+                                            @if (IsCurrentUser)
+                                            {
+                                                <ActionConfirmation Action="Close" DeleteCallBack="() => DeleteSkill(item.Id)"
+                                                                    DialogTitle="Are you sure you want to delete this Skill?"
+                                                                    DialogMessage1="This will delete the Skill. Once deleted can not be rolled back."
+                                                                    DialogMessage2="Do you want to proceed?">
+                                                </ActionConfirmation>
+                                            }
+                                        </div>
+                                    </li>
+                                }
 
-                        </ul>
+                            </ul>
+                        }
+
+                    </Card>
+                    @if (IsCurrentUser)
+                    {
+                        <SkillModel @ref="SkillModelRef" SkillModelCallback="AddSkill"></SkillModel>
                     }
-
-                </Card>
-                @if (IsCurrentUser)
-                {
-                    <SkillModel @ref="SkillModelRef" SkillModelCallback="AddSkill"></SkillModel>
-                }
+                </div>
             </div>
         }
     </div>

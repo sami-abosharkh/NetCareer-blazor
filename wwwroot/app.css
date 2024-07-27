@@ -45,6 +45,10 @@ p {
     overflow: hidden;
 }
 
+.job-card-description {
+    min-height: calc(1.5em * 2);
+}
+
 .text-justify {
     text-align: justify;
 }

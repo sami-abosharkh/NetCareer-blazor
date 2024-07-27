@@ -5,10 +5,10 @@
 <Card Class="shadow-sm">
     <CardBody>
         <div class="row">
-            <div class="col-10">
+            <div class="col-auto">
                 <CardTitle>@JobPost.Title</CardTitle>
             </div>
-            <div class="col-2 text-end">
+            <div class="col text-end">
                 @if (!string.IsNullOrEmpty(JobApplication?.ApplicationStatus))
                 {
                     <Badge Color="BadgeColor.Light"
@@ -19,17 +19,17 @@
             </div>
         </div>
 
-        <CardText Class="text-truncate-two">@JobPost.Description</CardText>
+        <CardText Class="text-truncate-two job-card-description">@JobPost.Description</CardText>
         <br />
         <div class="row">
-            <div class="col-8 d-flex align-items-end">
+            <div class="col-8 d-flex flex-wrap align-items-end">
                 <Badge Color="BadgeColor.Secondary" VisuallyHiddenText="WorkArrangement"><i class="bi bi-geo-alt-fill"></i> @JobPost.Location</Badge>
                 &nbsp;
                 <Badge Color="BadgeColor.Warning" VisuallyHiddenText="WorkArrangement">@JobPost.WorkArrangement</Badge>
                 &nbsp;
                 <Badge Color="BadgeColor.Warning" VisuallyHiddenText="JobType">@JobPost.JobType</Badge>
             </div>
-            <div class="col-4 text-end">
+            <div class="col text-end">
                 <Button Type="ButtonType.Button" Color="ButtonColor.Dark"
                         @onclick='() => OpenInNewTab($"/Job/Details/{JobPost.Id}")'>
                     Details <Icon Name="IconName.BoxArrowUpRight" />

@@ -1,4 +1,4 @@
-﻿<div class="input-group mb-3">
+﻿<div class="input-group">
     <input type="text" class="form-control" placeholder="Search" @bind="searchFilter" @bind:event="oninput" @bind:after="FilterClear" />
     <div class="input-group-append">
         <button @onclick="FilterHandlerAsync" class="btn @(string.IsNullOrEmpty(searchFilter) ? "btn-outline-secondary" : "btn-secondary")" type="button">Search</button>

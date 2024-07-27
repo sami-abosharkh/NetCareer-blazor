@@ -13,30 +13,30 @@
         <div class="collapse navbar-collapse" id="navbarColor01">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item px-2 py-2">
-                    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Home</NavLink>
+                    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All"><Icon Name="IconName.House" /> Home</NavLink>
                 </li>
                 <AuthorizeView Roles="@(SD.Role_Recruiter)">
                     <li class="nav-item px-2 py-2">
-                        <NavLink class="nav-link" href="/Recruiters/dashboard">Dashboard</NavLink>
+                        <NavLink class="nav-link" href="/Recruiters/dashboard"><Icon Name="IconName.ClipboardData" /> Dashboard</NavLink>
                     </li>
                 </AuthorizeView>
                 <AuthorizeView Roles="@(SD.Role_JobSeeker)">
                     <li class="nav-item px-2 py-2">
-                        <NavLink class="nav-link" href="/Jobseeker/dashboard">Dashboard</NavLink>
+                        <NavLink class="nav-link" href="/Jobseeker/dashboard"><Icon Name="IconName.ClipboardData" /> Dashboard</NavLink>
                     </li>
                 </AuthorizeView>
                 <AuthorizeView Roles="@SD.Role_Admin">
                     <Dropdown>
-                        <DropdownToggleButton Class="nav-link">Management</DropdownToggleButton>
+                        <DropdownToggleButton Class="nav-link"><Icon Name="IconName.ShieldLock" /> Management</DropdownToggleButton>
                         <DropdownMenu>
-                            <DropdownItem To="/admin/users" Type="DropdownItemType.Link">Users</DropdownItem>
-                            <DropdownItem To="/admin/dashboard" Type="DropdownItemType.Link">Job Posts</DropdownItem>
+                            <DropdownItem To="/admin/users" Type="DropdownItemType.Link"><Icon Name="IconName.People" /> Users</DropdownItem>
+                            <DropdownItem To="/admin/dashboard" Type="DropdownItemType.Link"><Icon Name="IconName.ClipboardData" /> Job Posts</DropdownItem>
                         </DropdownMenu>
                     </Dropdown>
                 </AuthorizeView>
                 <AuthorizeView>
                     <li class="nav-item px-2 py-2">
-                        <NavLink class="nav-link" href="/Messages">Messages</NavLink>
+                        <NavLink class="nav-link" href="/Messages"><Icon Name="IconName.Envelope" /> Messages</NavLink>
                     </li>
                 </AuthorizeView>
             </ul>

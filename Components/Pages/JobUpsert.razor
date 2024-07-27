@@ -89,12 +89,11 @@
             <label for="ExpiresAt">ExpiresAt</label>
             <InputDate id="ExpiresAt" @bind-Value="JobPost.ExpiresAt" class="form-control" />
             <br />
-            <ValidationSummary />
             <div class="row">
                 <div class="col-6"><button type="submit" class="btn btn-primary">@(CurrentJobPostId.HasValue ? "Save" : "Publish")</button></div>
                 <div class="col-6 text-end">
                     <Button Type="ButtonType.Link"
-                            To="@(JobPost.Id > 0 ? $"/Job/Manage/{JobPost.Id}" : "/Jobs" )" Color="ButtonColor.Primary" Outline="true">
+                            To="@(JobPost.Id > 0 ? $"/Job/Manage/{JobPost.Id}" : "/Recruiters/dashboard" )" Color="ButtonColor.Primary" Outline="true">
                         Cancel
                     </Button>
                 </div>
@@ -183,7 +182,7 @@
             // If the job post is new, set the posted date and create it
             JobPost.PostedAt = DateTime.Now;
             await JobPostRepo.CreateAsync(JobPost);
-            NavManager.NavigateTo("/Jobs");
+            NavManager.NavigateTo($"/Job/Manage/{JobPost.Id}");
         }
     }
 }

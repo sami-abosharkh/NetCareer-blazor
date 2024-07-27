@@ -13,7 +13,7 @@
 <br />
 <div class="container bg-white px-0 shadow-sm">
     <div class="d-flex h-100">
-        <div class="col-4 p-0">
+        <div class="col-4">
             <header class="navbar bg-light border-bottom border-3">
                 <div class="container-fluid">
                     <span class="navbar-brand mb-0 h1"><i class="bi bi-chat-left-text"></i> Messages</span>
@@ -97,6 +97,7 @@
             {
                 CurrentUserId = userId;
                 await GetPersonalContact();
+                await GetContacts();
             }
         }
     }
@@ -113,8 +114,6 @@
         {
             Chat.Clear(); // Clear chat if no contact ID is provided
         }
-
-        await GetContacts(); // Load contacts
     }
 
     private async Task GetPersonalContact()
@@ -140,7 +139,7 @@
 
         if (Contacts.Any())
         {
-            //Contacts.Clear();
+            Contacts.Clear();
         }
 
         foreach (var item in ContactsList)
@@ -250,6 +249,8 @@
                 await MessagesRepo.UpdateAsync(message); // Update the message in the repository
             }
         }
+
+        await GetContacts();
     }
 
     // Class to represent the input message
